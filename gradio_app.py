@@ -613,7 +613,8 @@ if __name__ == '__main__':
 
     INPUT_MESH_HTML = """<div style="height: 490px; width: 100%; border-radius: 8px; border-color: #e5e7eb; order-style: solid; border-width: 1px;"></div>"""
     example_is = get_example_img_list()
-    example_ts = get_example_txt_list()
+    #example_ts = get_example_txt_list()
+    example_ts = ["Text to 3D disabled.", ":)"]
     example_mvs = get_example_mv_list()
 
     SUPPORTED_FORMATS = ['glb', 'obj', 'ply', 'stl']

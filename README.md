@@ -193,7 +193,7 @@ It takes 6 GB VRAM for shape generation ~~and 16 GB for shape and texture genera
 
 | Model                        | Description               | Date       | Size | Huggingface               |
 |------------------------------|---------------------------|------------|------|---------------------------|
-| Hunyuan3D-DiT-v2-1           | Mini Image to Shape Model | 2025-06-13 | 3.0B | [Download][dit-v2-1]      |
+| ~~*Hunyuan3D-DiT-v2-1*~~     | Mini Image to Shape Model | 2025-06-13 | 3.0B | [Download][dit-v2-1]      |
 | ~~Hunyuan3D-Paint-v2-1~~     | Texture Generation Model  | 2025-06-13 | 1.3B | [Download][paintpbr-v2-1] |
 
 [dit-v2-1]: https://huggingface.co/tencent/Hunyuan3D-2.1/tree/main/hunyuan3d-dit-v2-1
