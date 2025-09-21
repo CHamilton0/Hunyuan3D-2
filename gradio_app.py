@@ -284,7 +284,7 @@ def generation_all(
     path_textured = export_mesh(textured_mesh, save_folder, textured=True)
     model_viewer_html_textured = build_model_viewer_html(save_folder, height=HTML_HEIGHT, width=HTML_WIDTH, textured=True)
 
-    if args.low_vram_mode:
+    if not args.no_low_vram_mode:
         torch.cuda.empty_cache()
 
     return (gr.update(value=path), gr.update(value=path_textured), model_viewer_html_textured, stats, seed)
@@ -317,7 +317,7 @@ def shape_generation(
     path = export_mesh(mesh, save_folder, textured=False)
     model_viewer_html = build_model_viewer_html(save_folder, height=HTML_HEIGHT, width=HTML_WIDTH)
 
-    if args.low_vram_mode:
+    if not args.no_low_vram_mode:
         torch.cuda.empty_cache()
 
     return (gr.update(value=path), model_viewer_html, stats, seed)
@@ -579,10 +579,10 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_path', type=str, default="tencent/Hunyuan3D-2mini")
-    parser.add_argument('--subfolder', type=str, default="hunyuan3d-dit-v2-mini-turbo")
+    parser.add_argument('--subfolder', type=str, default="hunyuan3d-dit-v2-mini")
     parser.add_argument('--texgen_model_path', type=str, default="tencent/Hunyuan3D-2")
     parser.add_argument('--port', type=int, default=8080)
-    parser.add_argument('--host', type=str, default="127.0.0.1")
+    parser.add_argument('--host', type=str, default="localhost")
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--mc_algo', type=str, default='mc')
     parser.add_argument('--cache-path', type=str, default="gradio_cache")
@@ -590,7 +590,7 @@ if __name__ == '__main__':
     parser.add_argument('--enable_tex', action='store_true')
     parser.add_argument('--enable_flashvdm', action='store_true')
     parser.add_argument('--compile', action='store_true')
-    parser.add_argument('--low_vram_mode', action='store_true')
+    parser.add_argument('--no_low_vram_mode', action='store_true')
     args = parser.parse_args()
 
     SAVE_DIR = args.cache_path
@@ -623,7 +623,7 @@ if __name__ == '__main__':
         try:
             from hy3dgen.texgen import Hunyuan3DPaintPipeline
             texgen_worker = Hunyuan3DPaintPipeline.from_pretrained(args.texgen_model_path)
-            if args.low_vram_mode:
+            if not args.no_low_vram_mode:
                 texgen_worker.enable_model_cpu_offload()
             # Not help much, ignore for now.
             # if args.compile:
@@ -671,7 +671,7 @@ if __name__ == '__main__':
     app.mount("/static", StaticFiles(directory=static_dir, html=True), name="static")
     shutil.copytree("./assets/env_maps", os.path.join(static_dir, "env_maps"), dirs_exist_ok=True)
 
-    if args.low_vram_mode:
+    if not args.no_low_vram_mode:
         torch.cuda.empty_cache()
 
     demo = build_app()

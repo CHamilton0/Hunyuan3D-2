@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = ["setuptools.build_meta"]
+
+[project]
+name = "hy3dgen"
+version = "2.0.2"
+readme = "README.md"
+license = "MIT and CreativeML Open RAIL++-M"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{name = "Tencent"}]
+dependencies = [
+    "gradio",
+    "tqdm>=4.66.3",
+    "numpy",
+    "ninja",
+    "diffusers",
+    "pybind11",
+    "opencv-python",
+    "einops",
+    "transformers>=4.48.0",
+    "omegaconf",
+    "trimesh",
+    "pymeshlab",
+    "pygltflib",
+    "xatlas",
+    "accelerate",
+    "gradio",
+    "fastapi",
+    "uvicorn",
+    "rembg",
+    "onnxruntime",
+]
+
+[project.urls]
+Homepage = "https://hunyuan-3d.com/"
+Repository = "https://github.com/Tencent-Hunyuan/Hunyuan3D-2.git"
+
+[tool.setuptools]
+packages = ["hy3dgen"]
+
+[tool.setuptools.package-data]
+hy3dgen = ["assets/*", "assets/**/*"]
+
+[tool.setuptools.packages]
+find = {}
