@@ -1,3 +1,5 @@
+# Note: Vertex IDs can be visualised in 3D modelling programs (I used Maya 2023)
+
 import trimesh
 
 # Path to GLB mesh file

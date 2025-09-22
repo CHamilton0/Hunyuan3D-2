@@ -85,22 +85,22 @@ python3 gradio_app.py
 
 ```bash
 # Hunyuan3D-2mini (WORKING)
-python3 gradio_app.py --model_path tencent/Hunyuan3D-2mini --subfolder hunyuan3d-dit-v2-mini
+python3 gradio_app.py --model-path tencent/Hunyuan3D-2mini --subfolder hunyuan3d-dit-v2-mini
 ```
 
 ```bash
 # Hunyuan3D-2mv
-python3 gradio_app.py --model_path tencent/Hunyuan3D-2mv --subfolder hunyuan3d-dit-v2-mv
+python3 gradio_app.py --model-path tencent/Hunyuan3D-2mv --subfolder hunyuan3d-dit-v2-mv
 ```
 
 ```bash
 # Hunyuan3D-2 (NOT WORKING)
-python3 gradio_app.py --model_path tencent/Hunyuan3D-2 --subfolder hunyuan3d-dit-v2-0
+python3 gradio_app.py --model-path tencent/Hunyuan3D-2 --subfolder hunyuan3d-dit-v2-0
 ```
 
 ```bash
 # Hunyuan3D-2.1 (NOT WORKING -- No Safetensors)
-python3 gradio_app.py --model_path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-dit-v2-1
+python3 gradio_app.py --model-path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-dit-v2-1
 ```
 
 
@@ -108,17 +108,17 @@ python3 gradio_app.py --model_path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-d
 
 ```bash
 # Hunyuan3D-2mini
-python3 gradio_app.py --model_path tencent/Hunyuan3D-2mini --subfolder hunyuan3d-dit-v2-mini-turbo --enable_flashvdm
+python3 gradio_app.py --model-path tencent/Hunyuan3D-2mini --subfolder hunyuan3d-dit-v2-mini-turbo --enable-flashvdm
 ```
 
 ```bash
 # Hunyuan3D-2mv
-python3 gradio_app.py --model_path tencent/Hunyuan3D-2mv --subfolder hunyuan3d-dit-v2-mv-turbo --enable_flashvdm
+python3 gradio_app.py --model-path tencent/Hunyuan3D-2mv --subfolder hunyuan3d-dit-v2-mv-turbo --enable-flashvdm
 ```
 
 ```bash
 # Hunyuan3D-2
-python3 gradio_app.py --model_path tencent/Hunyuan3D-2 --subfolder hunyuan3d-dit-v2-0-turbo --enable_flashvdm
+python3 gradio_app.py --model-path tencent/Hunyuan3D-2 --subfolder hunyuan3d-dit-v2-0-turbo --enable-flashvdm
 ```
 
 
@@ -127,7 +127,7 @@ python3 gradio_app.py --model_path tencent/Hunyuan3D-2 --subfolder hunyuan3d-dit
 You could launch an API server locally, which you could post web request for Image/Text to 3D, Texturing existing mesh, and etc.:
 
 ```bash
-python api_server.py --host 0.0.0.0 --port 8080
+python api_server.py --host 127.0.0.1 --port 8080
 ```
 
 A demo post request for image to 3D without texture:

@@ -189,7 +189,7 @@ def _gen_shape(
         try:
             image = t2i_worker(caption)
         except Exception as e:
-            raise gr.Error(f"Text to 3D is disable. Please enable it by `python gradio_app.py --enable_t23d`.")
+            raise gr.Error(f"Text to 3D is disable. Please enable it by `python gradio_app.py --enable-t23d`.")
         time_meta['text2image'] = time.time() - start_time
 
     # Remove disk io to make responding faster, uncomment at your will.
@@ -466,7 +466,7 @@ def build_app():
             gr.HTML(
                 """
                 <div style="margin-top: 5px;" align="center">
-                    <b>Warning: </b>Text to 3D is disable. To activate it, please run `python gradio_app.py --enable_t23d`.
+                    <b>Warning: </b>Text to 3D is disable. To activate it, please run `python gradio_app.py --enable-t23d`.
                 </div>
                 """
             )
@@ -578,19 +578,19 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_path', type=str, default="tencent/Hunyuan3D-2mini")
+    parser.add_argument('--model-path', type=str, default="tencent/Hunyuan3D-2mini")
     parser.add_argument('--subfolder', type=str, default="hunyuan3d-dit-v2-mini")
-    parser.add_argument('--texgen_model_path', type=str, default="tencent/Hunyuan3D-2")
+    parser.add_argument('--texgen-model-path', type=str, default="tencent/Hunyuan3D-2")
     parser.add_argument('--port', type=int, default=8080)
-    parser.add_argument('--host', type=str, default="localhost")
+    parser.add_argument('--host', type=str, default="127.0.0.1")
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--mc_algo', type=str, default='mc')
+    parser.add_argument('--mc-algo', type=str, default='mc')
     parser.add_argument('--cache-path', type=str, default="gradio_cache")
-    parser.add_argument('--enable_t23d', action='store_true')
-    parser.add_argument('--enable_tex', action='store_true')
-    parser.add_argument('--enable_flashvdm', action='store_true')
+    parser.add_argument('--enable-t23d', action='store_true')
+    parser.add_argument('--enable-tex', action='store_true')
+    parser.add_argument('--enable-flashvdm', action='store_true')
     parser.add_argument('--compile', action='store_true')
-    parser.add_argument('--no_low_vram_mode', action='store_true')
+    parser.add_argument('--no-low-vram-mode', action='store_true')
     args = parser.parse_args()
 
     SAVE_DIR = args.cache_path
