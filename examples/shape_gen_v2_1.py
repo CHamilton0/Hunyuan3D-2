@@ -18,10 +18,7 @@ from hy3dgen.rembg import BackgroundRemover
 from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline
 
 model_path = 'tencent/Hunyuan3D-2.1'
-pipeline_shapegen = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
-    model_path,
-    subfolder='hunyuan3d-dit-v2-1'
-)
+pipeline_shapegen = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(model_path, subfolder='hunyuan3d-dit-v2-1')
 
 image_path = 'assets/demo.png'
 image = Image.open(image_path).convert("RGBA")

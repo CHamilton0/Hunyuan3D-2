@@ -21,5 +21,5 @@ class BackgroundRemover():
         self.session = new_session()
 
     def __call__(self, image: Image.Image):
-        output = remove(image, session=self.session, bgcolor=[255, 255, 255, 0])
+        output = remove(image, session=self.session, bgcolor=(255, 255, 255, 0))
         return output

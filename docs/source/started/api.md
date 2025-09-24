@@ -1,13 +1,12 @@
 # API
 
-You could launch an API server locally, which you could post web request for Image/Text to 3D, Texturing existing mesh,
-and e.t.c.
+You could launch an API server locally, which you could post web request for Image/Text to 3D, Texturing existing mesh, etc.:
 
 ```bash
 python api_server.py --host 127.0.0.1 --port 8080
 ```
 
-A demo post request for image to 3D without texture.
+A demo post request for image to 3D without texture:
 
 ```bash
 img_b64_str=$(base64 -i assets/demo.png)

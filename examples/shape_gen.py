@@ -15,16 +15,17 @@ if image.mode == 'RGB':
 pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
     'tencent/Hunyuan3D-2',
     subfolder='hunyuan3d-dit-v2-0',
-    variant='fp16'
+    variant='fp16',
 )
 
 start_time = time.time()
-mesh = pipeline(image=image,
-                num_inference_steps=50,
-                octree_resolution=380,
-                num_chunks=20000,
-                generator=torch.manual_seed(12345),
-                output_type='trimesh'
-                )[0]
+mesh = pipeline(
+    image=image,
+    num_inference_steps=50,
+    octree_resolution=380,
+    num_chunks=20000,
+    generator=torch.manual_seed(12345),
+    output_type='trimesh',
+)[0]
 print("--- %s seconds ---" % (time.time() - start_time))
 mesh.export(f'demo.glb')

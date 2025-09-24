@@ -8,7 +8,10 @@ version = "2.0.2"
 readme = "README.md"
 license = "LicenseRef-Tencent-Hunyuan-Community"
 license-files = ["LICENSE", "NOTICE"]
-authors = [{name = "Tencent"}]
+authors = [
+    {name = "Hunyuan3D Team"},
+    {name = "Tencent"},
+]
 dependencies = [
     "accelerate",
     "diffusers",

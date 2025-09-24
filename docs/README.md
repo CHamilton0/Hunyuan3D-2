@@ -9,4 +9,3 @@ make html
 ```
 
 - Preview at `build/html/index.html`
-

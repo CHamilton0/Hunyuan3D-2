@@ -19,7 +19,11 @@ from functools import wraps
 import torch
 
 
+os.environ['HF_HUB_ENABLE_HF_TRANSFER'] = '1'
+
+
 def get_logger(name):
+
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
 
@@ -29,29 +33,31 @@ def get_logger(name):
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
+
     return logger
 
 
-logger = get_logger('hy3dgen.shapgen')
+logger = get_logger('hy3dgen.shapegen')
 
 
 class synchronize_timer:
-    """ Synchronized timer to count the inference time of `nn.Module.forward`.
+    """
+    Synchronized timer to count the inference time of `nn.Module.forward`.
 
-        Supports both context manager and decorator usage.
+    Supports both context manager and decorator usage.
 
-        Example as context manager:
-        ```python
-        with synchronize_timer('name') as t:
-            run()
-        ```
+    Example as context manager:
+    ```python
+    with synchronize_timer('name') as t:
+        run()
+    ```
 
-        Example as decorator:
-        ```python
-        @synchronize_timer('Export to trimesh')
-        def export_to_trimesh(mesh_output):
-            pass
-        ```
+    Example as decorator:
+    ```python
+    @synchronize_timer('Export to trimesh')
+    def export_to_trimesh(mesh_output):
+        pass
+    ```
     """
 
     def __init__(self, name=None):
@@ -72,7 +78,7 @@ class synchronize_timer:
             torch.cuda.synchronize()
             self.time = self.start.elapsed_time(self.end)
             if self.name is not None:
-                logger.info(f'{self.name} takes {self.time} ms')
+                logger.info(f"{self.name} takes {self.time} ms")
 
     def __call__(self, func):
         """Decorator: wrap the function to time its execution."""
@@ -90,7 +96,7 @@ def smart_load_model(model_path, subfolder, use_safetensors, variant):
 
     original_model_path = model_path
 
-    # try local path
+    # Try local path
     base_dir = os.environ.get('HY3DGEN_MODELS', os.path.join("~", ".cache", "huggingface", "hub"))
     model_dir = "--".join(("models",) + os.path.split(model_path))
     model_path = os.path.expanduser(os.path.join(base_dir, model_dir, "snapshots"))
@@ -105,23 +111,20 @@ def smart_load_model(model_path, subfolder, use_safetensors, variant):
             model_path = dir_path
             break
 
-    model_path = os.path.join(model_path, subfolder, ckpt_name)
+    model_path = os.path.join(model_path, subfolder)
 
-    logger.info(f'Try to load model from local path: {model_path}')
+    logger.info(f"Try to load model from local path: {model_path}")
     if not os.path.exists(model_path):
-        logger.info('Model path not exists, try to download from huggingface')
+        logger.info("Model path does not exist, try to download from huggingface")
         try:
             from huggingface_hub import snapshot_download
-            # 只下载指定子目录
-            path = snapshot_download(
-                repo_id=original_model_path,
-                allow_patterns=[f"{subfolder}/{config_name}", f"{subfolder}/{ckpt_name}"],  # 关键修改：模式匹配子文件夹
-            )
-            model_path = os.path.join(path, subfolder)  # 保持路径拼接逻辑不变
+            # Download only specified subdirectory (只下载指定子目录)
+            # Key modification: Pattern matching subfolders (关键修改：模式匹配子文件夹)
+            path = snapshot_download(repo_id=original_model_path, allow_patterns=[f"{subfolder}/{config_name}", f"{subfolder}/{ckpt_name}"])
+            # Keep path splicing logic unchanged (保持路径拼接逻辑不变)
+            model_path = os.path.join(path, subfolder)
         except ImportError:
-            logger.warning(
-                "You need to install HuggingFace Hub to load models from the hub."
-            )
+            logger.warning("You need to install HuggingFace Hub to load models from the hub.")
             raise RuntimeError(f"Model path {model_path} not found")
         except Exception as e:
             raise e
