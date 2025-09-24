@@ -31,6 +31,8 @@
 Hunyuan3D 2.0 features a two-stage generation pipeline, starting with the creation of a bare mesh, followed by the synthesis of a texture map for that mesh. This
 strategy is effective for decoupling the difficulties of shape and texture generation and also provides flexibility for texturing either generated or handcrafted meshes.
 
+> Note: Texture synthesis was removed for this project.
+
 <p align="left">
   <img src="assets/images/arch.jpg">
 </p>
@@ -107,7 +109,7 @@ python3 gradio_app.py --model-path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-d
 ##### Turbo Version
 
 ```bash
-# Hunyuan3D-2mini
+# Hunyuan3D-2mini (WORKING)
 python3 gradio_app.py --model-path tencent/Hunyuan3D-2mini --subfolder hunyuan3d-dit-v2-mini-turbo --enable-flashvdm
 ```
 
@@ -124,7 +126,7 @@ python3 gradio_app.py --model-path tencent/Hunyuan3D-2 --subfolder hunyuan3d-dit
 
 ### API Server
 
-You could launch an API server locally, which you could post web request for Image/Text to 3D, Texturing existing mesh, and etc.:
+You could launch an API server locally, which you could post web request for Image/Text to 3D, Texturing existing mesh, etc.:
 
 ```bash
 python api_server.py --host 127.0.0.1 --port 8080
@@ -174,7 +176,7 @@ based diffusion transformer, aims to create geometry that properly aligns with a
 texture synthesis model, benefiting from strong geometric and diffusion priors, produces high-resolution and vibrant texture maps for either generated or hand-crafted
 meshes. Furthermore, we build Hunyuan3D-Studio - a versatile, user-friendly production platform that simplifies the re-creation process of 3D assets. It allows both
 professional and amateur users to manipulate or even animate their meshes efficiently. We systematically evaluate our models, showing that Hunyuan3D 2.0 outperforms
-previous state-of-the-art models, including the open-source models and closed-source models in geometry details, condition alignment, texture quality, and etc.
+previous state-of-the-art models, including the open-source models and closed-source models in geometry details, condition alignment, texture quality, etc.
 
 
 <p align="center">
@@ -202,11 +204,11 @@ It takes 6 GB VRAM for shape generation ~~and 16 GB for shape and texture genera
 
 ### Hunyuan3D-2mini Series
 
-| Model                       | Description                   | Date       | Size | Huggingface                   |
-|-----------------------------|-------------------------------|------------|------|-------------------------------|
-| Hunyuan3D-DiT-v2-mini-Turbo | Step Distillation Version     | 2025-03-19 | 0.6B | [Download][dit-v2-mini-turbo] |
-| Hunyuan3D-DiT-v2-mini-Fast  | Guidance Distillation Version | 2025-03-18 | 0.6B | [Download][dit-v2-mini-fast]  |
-| **Hunyuan3D-DiT-v2-mini**   | Mini Image to Shape Model     | 2025-03-18 | 0.6B | [Download][dit-v2-mini]       |
+| Model                           | Description                   | Date       | Size | Huggingface                   |
+|---------------------------------|-------------------------------|------------|------|-------------------------------|
+| **Hunyuan3D-DiT-v2-mini-Turbo** | Step Distillation Version     | 2025-03-19 | 0.6B | [Download][dit-v2-mini-turbo] |
+| Hunyuan3D-DiT-v2-mini-Fast      | Guidance Distillation Version | 2025-03-18 | 0.6B | [Download][dit-v2-mini-fast]  |
+| **Hunyuan3D-DiT-v2-mini**       | Mini Image to Shape Model     | 2025-03-18 | 0.6B | [Download][dit-v2-mini]       |
 
 [dit-v2-mini-turbo]: https://huggingface.co/tencent/Hunyuan3D-2mini/tree/main/hunyuan3d-dit-v2-mini-turbo
 [dit-v2-mini-fast]: https://huggingface.co/tencent/Hunyuan3D-2mini/tree/main/hunyuan3d-dit-v2-mini-fast
@@ -232,7 +234,7 @@ It takes 6 GB VRAM for shape generation ~~and 16 GB for shape and texture genera
 |--------------------------------|-----------------------------|------------|------|------------------------------|
 | Hunyuan3D-DiT-v2-0-Turbo       | Step Distillation Model     | 2025-03-19 | 1.1B | [Download][dit-v2-0-turbo]   |
 | Hunyuan3D-DiT-v2-0-Fast        | Guidance Distillation Model | 2025-02-03 | 1.1B | [Download][dit-v2-0-fast]    |
-| ~~*Hunyuan3D-DiT-v2-0*~~       | Image to Shape Model        | 2025-01-21 | 1.1B | [Download][dit-v2-0]         |
+| **Hunyuan3D-DiT-v2-0**         | Image to Shape Model        | 2025-01-21 | 1.1B | [Download][dit-v2-0]         |
 | ~~Hunyuan3D-Paint-v2-0~~       | Texture Generation Model    | 2025-01-21 | 1.3B | [Download][paint-v2-0]       |
 | ~~Hunyuan3D-Paint-v2-0-Turbo~~ | Distillation Texure Model   | 2025-04-01 | 1.3B | [Download][paint-v2-0-turbo] |
 | Hunyuan3D-Delight-v2-0         | Image Delight Model         | 2025-01-21 | 1.3B | [Download][delight-v2-0]     |
@@ -278,18 +280,6 @@ If you found this repository helpful, please cite our reports:
       primaryClass={cs.CV},
 }
 ```
-
-
-## **Community Resources**
-
-Thanks for the contributions of community members, here we have these great extensions of Hunyuan3D 2.0:
-
-- [ComfyUI-3D-Pack](https://github.com/MrForExample/ComfyUI-3D-Pack)
-- [ComfyUI-Hunyuan3DWrapper](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper)
-- [Hunyuan3D-2-for-windows](https://github.com/sdbds/Hunyuan3D-2-for-windows)
-- [📦 A bundle for running on Windows | 整合包](https://github.com/YanWenKun/Hunyuan3D-2-WinPortable)
-- [Hunyuan3D-2GP](https://github.com/deepbeepmeep/Hunyuan3D-2GP)
-- [Kaggle Notebook](https://github.com/darkon12/Hunyuan3D-2GP_Kaggle)
 
 
 ## **Acknowledgements**

@@ -16,7 +16,6 @@ import copy
 import importlib
 import inspect
 import os
-from typing import List, Optional, Union
 
 import numpy as np
 import torch
@@ -34,10 +33,10 @@ from .utils import logger, synchronize_timer, smart_load_model
 
 def retrieve_timesteps(
     scheduler,
-    num_inference_steps: Optional[int] = None,
-    device: Optional[Union[str, torch.device]] = None,
-    timesteps: Optional[List[int]] = None,
-    sigmas: Optional[List[float]] = None,
+    num_inference_steps: int = None,
+    device: str | torch.device = None,
+    timesteps: list[int] = None,
+    sigmas: list[float] = None,
     **kwargs,
 ):
     """
@@ -52,10 +51,10 @@ def retrieve_timesteps(
             must be `None`.
         device (`str` or `torch.device`, *optional*):
             The device to which the timesteps should be moved to. If `None`, the timesteps are not moved.
-        timesteps (`List[int]`, *optional*):
+        timesteps (`list[int]`, *optional*):
             Custom timesteps used to override the timestep spacing strategy of the scheduler. If `timesteps` is passed,
             `num_inference_steps` and `sigmas` must be `None`.
-        sigmas (`List[float]`, *optional*):
+        sigmas (`list[float]`, *optional*):
             Custom sigmas used to override the timestep spacing strategy of the scheduler. If `sigmas` is passed,
             `num_inference_steps` and `timesteps` must be `None`.
 
@@ -201,7 +200,7 @@ class Hunyuan3DDiTPipeline:
     def from_pretrained(
         cls,
         model_path,
-        device='cuda',
+        device: str | torch.device = 'cuda',
         dtype=torch.float16,
         use_safetensors=True,
         variant='fp16',
@@ -220,7 +219,7 @@ class Hunyuan3DDiTPipeline:
             model_path,
             subfolder=subfolder,
             use_safetensors=use_safetensors,
-            variant=variant
+            variant=variant,
         )
         return cls.from_single_file(
             ckpt_path,
@@ -228,7 +227,7 @@ class Hunyuan3DDiTPipeline:
             device=device,
             dtype=dtype,
             use_safetensors=use_safetensors,
-            **kwargs
+            **kwargs,
         )
 
     def __init__(
@@ -240,7 +239,7 @@ class Hunyuan3DDiTPipeline:
         image_processor,
         device='cuda',
         dtype=torch.float16,
-        **kwargs
+        **kwargs,
     ):
         self.vae = vae
         self.model = model
@@ -331,7 +330,7 @@ class Hunyuan3DDiTPipeline:
                     return torch.device(module._hf_hook.execution_device)
         return self.device
 
-    def enable_model_cpu_offload(self, gpu_id: Optional[int] = None, device: Union[torch.device, str] = "cuda"):
+    def enable_model_cpu_offload(self, gpu_id: int = None, device: torch.device | str = 'cuda'):
         r"""
         Offloads all models to CPU using accelerate, reducing memory usage with a low impact on performance. Compared
         to `enable_sequential_cpu_offload`, this method moves one whole model at a time to the GPU when its `forward`
@@ -551,10 +550,10 @@ class Hunyuan3DDiTPipeline:
     @torch.no_grad()
     def __call__(
         self,
-        image: Union[str, List[str], Image.Image] = None,
+        image: str | list[str] | Image.Image = None,
         num_inference_steps: int = 50,
-        timesteps: List[int] = None,
-        sigmas: List[float] = None,
+        timesteps: list[int] = None,
+        sigmas: list[float] = None,
         eta: float = 0.0,
         guidance_scale: float = 7.5,
         dual_guidance_scale: float = 10.5,
@@ -565,10 +564,10 @@ class Hunyuan3DDiTPipeline:
         mc_level=-1 / 512,
         num_chunks=8000,
         mc_algo=None,
-        output_type: Optional[str] = "trimesh",
+        output_type: str = 'trimesh',
         enable_pbar=True,
         **kwargs,
-    ) -> List[List[trimesh.Trimesh]]:
+    ) -> list[list[trimesh.Trimesh]]:
         callback = kwargs.pop("callback", None)
         callback_steps = kwargs.pop("callback_steps", None)
 
@@ -682,10 +681,10 @@ class Hunyuan3DDiTFlowMatchingPipeline(Hunyuan3DDiTPipeline):
     @torch.inference_mode()
     def __call__(
         self,
-        image: Union[str, List[str], Image.Image, dict, List[dict]] = None,
+        image: str | list[str] | Image.Image | dict | list[dict] = None,
         num_inference_steps: int = 50,
-        timesteps: List[int] = None,
-        sigmas: List[float] = None,
+        timesteps: list[int] = None,
+        sigmas: list[float] = None,
         eta: float = 0.0,
         guidance_scale: float = 5.0,
         generator=None,
@@ -694,12 +693,12 @@ class Hunyuan3DDiTFlowMatchingPipeline(Hunyuan3DDiTPipeline):
         mc_level=0.0,
         mc_algo=None,
         num_chunks=8000,
-        output_type: Optional[str] = "trimesh",
+        output_type: str = 'trimesh',
         enable_pbar=True,
         **kwargs,
-    ) -> List[List[trimesh.Trimesh]]:
-        callback = kwargs.pop("callback", None)
-        callback_steps = kwargs.pop("callback_steps", None)
+    ) -> list[list[trimesh.Trimesh]]:
+        callback = kwargs.pop('callback', None)
+        callback_steps = kwargs.pop('callback_steps', None)
 
         self.set_surface_extractor(mc_algo)
 
