@@ -93,19 +93,19 @@ def smart_load_model(model_path, subfolder, use_safetensors, variant):
     # try local path
     base_dir = os.environ.get('HY3DGEN_MODELS', os.path.join("~", ".cache", "huggingface", "hub"))
     model_dir = "--".join(("models",) + os.path.split(model_path))
-    model_path = os.path.expanduser(os.path.join(base_dir, model_path, subfolder))
-    model_cache_path = os.path.expanduser(os.path.join(base_dir, model_dir, "snapshots"))
-
-    for dir_path, _, _ in os.walk(model_cache_path):
-        if dir_path.endswith(subfolder):
-            print(dir_path)
-            model_path = dir_path
-            break
+    model_path = os.path.expanduser(os.path.join(base_dir, model_dir, "snapshots"))
 
     config_name = "config.yaml"
     extension = "safetensors" if use_safetensors else "ckpt"
     variant = "" if variant is None else f".{variant}"
     ckpt_name = f"model{variant}.{extension}"
+
+    for dir_path, dir_names, _ in os.walk(model_path):
+        if subfolder in dir_names:
+            model_path = dir_path
+            break
+
+    model_path = os.path.join(model_path, subfolder, ckpt_name)
 
     logger.info(f'Try to load model from local path: {model_path}')
     if not os.path.exists(model_path):
