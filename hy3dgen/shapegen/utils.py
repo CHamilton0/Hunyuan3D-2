@@ -86,16 +86,27 @@ class synchronize_timer:
         return wrapper
 
 
-def smart_load_model(
-    model_path,
-    subfolder,
-    use_safetensors,
-    variant,
-):
+def smart_load_model(model_path, subfolder, use_safetensors, variant):
+
     original_model_path = model_path
+
     # try local path
-    base_dir = os.environ.get('HY3DGEN_MODELS', '~/.cache/hy3dgen')
+    base_dir = os.environ.get('HY3DGEN_MODELS', os.path.join("~", ".cache", "huggingface", "hub"))
+    model_dir = "--".join(("models",) + os.path.split(model_path))
     model_path = os.path.expanduser(os.path.join(base_dir, model_path, subfolder))
+    model_cache_path = os.path.expanduser(os.path.join(base_dir, model_dir, "snapshots"))
+
+    for dir_path, _, _ in os.walk(model_cache_path):
+        if dir_path.endswith(subfolder):
+            print(dir_path)
+            model_path = dir_path
+            break
+
+    config_name = "config.yaml"
+    extension = "safetensors" if use_safetensors else "ckpt"
+    variant = "" if variant is None else f".{variant}"
+    ckpt_name = f"model{variant}.{extension}"
+
     logger.info(f'Try to load model from local path: {model_path}')
     if not os.path.exists(model_path):
         logger.info('Model path not exists, try to download from huggingface')
@@ -104,7 +115,7 @@ def smart_load_model(
             # 只下载指定子目录
             path = snapshot_download(
                 repo_id=original_model_path,
-                allow_patterns=[f"{subfolder}/*"],  # 关键修改：模式匹配子文件夹
+                allow_patterns=[f"{subfolder}/{config_name}", f"{subfolder}/{ckpt_name}"],  # 关键修改：模式匹配子文件夹
             )
             model_path = os.path.join(path, subfolder)  # 保持路径拼接逻辑不变
         except ImportError:
@@ -118,9 +129,7 @@ def smart_load_model(
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Model path {original_model_path} not found")
 
-    extension = 'ckpt' if not use_safetensors else 'safetensors'
-    variant = '' if variant is None else f'.{variant}'
-    ckpt_name = f'model{variant}.{extension}'
-    config_path = os.path.join(model_path, 'config.yaml')
+    config_path = os.path.join(model_path, config_name)
     ckpt_path = os.path.join(model_path, ckpt_name)
+
     return config_path, ckpt_path
