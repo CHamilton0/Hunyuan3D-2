@@ -135,13 +135,11 @@ python api_server.py --host 127.0.0.1 --port 8080
 A demo post request for image to 3D without texture:
 
 ```bash
-img_b64_str=$(base64 -i assets/demo.png)
+img_b64_str=$(base64 -i assets/demo.png) \
 curl -X POST "http://localhost:8080/generate" \
      -H "Content-Type: application/json" \
-     -d '{
-           "image": "'"$img_b64_str"'",
-         }' \
-     -o test2.glb
+     -d '{"image": "'"$img_b64_str"'"}' \
+     -o test2.glb;
 ```
 
 

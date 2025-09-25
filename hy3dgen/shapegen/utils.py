@@ -19,7 +19,7 @@ from functools import wraps
 import torch
 
 
-os.environ['HF_HUB_ENABLE_HF_TRANSFER'] = '1'
+#os.environ['HF_HUB_ENABLE_HF_TRANSFER'] = '1'
 
 
 def get_logger(name):
@@ -106,15 +106,15 @@ def smart_load_model(model_path, subfolder, use_safetensors, variant):
     variant = "" if variant is None else f".{variant}"
     ckpt_name = f"model{variant}.{extension}"
 
-    for dir_path, dir_names, _ in os.walk(model_path):
-        if subfolder in dir_names:
-            model_path = dir_path
+    for dir_path, dir_names, file_names in os.walk(model_path):
+        if dir_path.endswith(subfolder):
+            model_path = os.path.dirname(dir_path)
             break
 
     model_path = os.path.join(model_path, subfolder)
 
     logger.info(f"Try to load model from local path: {model_path}")
-    if not os.path.exists(model_path):
+    if not os.path.exists(os.path.join(model_path, ckpt_name)):
         logger.info("Model path does not exist, try to download from huggingface")
         try:
             from huggingface_hub import snapshot_download

@@ -187,7 +187,7 @@ class ModelWorker:
         else:
             if 'text' in params:
                 text = params['text']
-                image = self.pipeline_t2i(text)
+                image = None #self.pipeline_t2i(text)
             else:
                 raise ValueError("No input image or text provided.")
 
@@ -237,8 +237,12 @@ app.add_middleware(
     allow_headers=["*"],        # Allow all headers (允许所有头部)
 )
 
+@app.get("/")
+async def read_root():
+    return {"Hello": "World"}
 
-@app.post("/generate")
+
+@app.post("/generate/")
 async def generate(request: Request):
 
     logger.info("Worker generating...")
@@ -264,7 +268,7 @@ async def generate(request: Request):
         return JSONResponse(ret, status_code=404)
 
 
-@app.post("/send")
+@app.post("/send/")
 async def generate(request: Request):
 
     logger.info("Worker send...")
@@ -276,7 +280,7 @@ async def generate(request: Request):
     return JSONResponse(ret, status_code=200)
 
 
-@app.get("/status/{uid}")
+@app.get("/status/{uid}/")
 async def status(uid: str):
 
     save_file_path = os.path.join(SAVE_DIR, f"{uid}.glb")
@@ -309,4 +313,4 @@ if __name__ == "__main__":
     model_semaphore = asyncio.Semaphore(args.limit_model_concurrency)
 
     worker = ModelWorker(model_path=args.model_path, device=args.device, enable_tex=args.enable_tex, tex_model_path=args.tex_model_path)
-    uvicorn.run(app, host=args.host, port=args.port, log_level='info')
+    uvicorn.run(app, host=args.host, port=args.port, log_level='info', reload=True, workers=1)

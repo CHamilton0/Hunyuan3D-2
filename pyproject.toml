@@ -16,7 +16,7 @@ dependencies = [
     "accelerate",
     "diffusers",
     "einops",
-    "fastapi",
+    "fastapi[standard]",
     "gradio",
     "huggingface-hub[hf-transfer, hf-xet]",
     "ninja",
