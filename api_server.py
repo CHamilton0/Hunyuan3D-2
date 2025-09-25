@@ -16,6 +16,7 @@
 A model worker executes the model.
 """
 
+import argparse
 import asyncio
 import base64
 import logging
@@ -143,7 +144,7 @@ def load_image_from_base64(image):
 
 class ModelWorker:
 
-    def __init__(self, model_path="tencent/Hunyuan3D-2mini", tex_model_path="tencent/Hunyuan3D-2", subfolder="hunyuan3d-dit-v2-mini-turbo", device='cuda', enable_tex=False):
+    def __init__(self, model_path="tencent/Hunyuan3D-2mini", tex_model_path="tencent/Hunyuan3D-2", subfolder="hunyuan3d-dit-v2-mini", device='cuda', enable_tex=False):
 
         self.model_path = model_path
         self.worker_id = worker_id
@@ -157,7 +158,7 @@ class ModelWorker:
             use_safetensors=True,
             device=device,
         )
-        self.pipeline.enable_flashvdm(mc_algo='mc')
+        #self.pipeline.enable_flashvdm(mc_algo='mc')
         # self.pipeline_t2i = HunyuanDiTPipeline(
         #     "Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled",
         #     device=device,
@@ -297,8 +298,6 @@ async def status(uid: str):
 
 if __name__ == "__main__":
 
-    import argparse
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--host', type=str, default="127.0.0.1")
     parser.add_argument('--port', type=int, default=8080)
@@ -312,5 +311,5 @@ if __name__ == "__main__":
 
     model_semaphore = asyncio.Semaphore(args.limit_model_concurrency)
 
-    worker = ModelWorker(model_path=args.model_path, device=args.device, enable_tex=args.enable_tex, tex_model_path=args.tex_model_path)
-    uvicorn.run(app, host=args.host, port=args.port, log_level='info', reload=True, workers=1)
+    worker = ModelWorker(model_path=args.model_path, device=args.device)
+    uvicorn.run(app, host=args.host, port=args.port, log_level='info')
