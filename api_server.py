@@ -82,8 +82,7 @@ def build_logger(logger_name, logger_filename):
     if handler is None:
         os.makedirs(LOGDIR, exist_ok=True)
         filename = os.path.join(LOGDIR, logger_filename)
-        handler = logging.handlers.TimedRotatingFileHandler(
-            filename, when='D', utc=True, encoding='UTF-8')
+        handler = logging.handlers.TimedRotatingFileHandler(filename, when='D', utc=True, encoding='UTF-8')
         handler.setFormatter(formatter)
 
         for name, item in logging.root.manager.loggerDict.items():
@@ -94,9 +93,7 @@ def build_logger(logger_name, logger_filename):
 
 
 class StreamToLogger(object):
-    """
-    Fake file-like stream object that redirects writes to a logger instance.
-    """
+    """Fake file-like stream object that redirects writes to a logger instance."""
 
     def __init__(self, logger, log_level=logging.INFO):
         self.terminal = sys.stdout
@@ -256,16 +253,16 @@ async def generate(request: Request):
     except ValueError as e:
         traceback.print_exc()
         print("Caught ValueError:", e)
-        ret = {'text': server_error_msg, 'error_code': 1}
+        ret = {"text": server_error_msg, "error_code": 1}
         return JSONResponse(ret, status_code=404)
     except torch.cuda.CudaError as e:
         print("Caught torch.cuda.CudaError:", e)
-        ret = {'text': server_error_msg, 'error_code': 1}
+        ret = {"text": server_error_msg, "error_code": 1}
         return JSONResponse(ret, status_code=404)
     except Exception as e:
         traceback.print_exc()
         print("Caught Unknown Error", e)
-        ret = {'text': server_error_msg, 'error_code': 1}
+        ret = {"text": server_error_msg, "error_code": 1}
         return JSONResponse(ret, status_code=404)
 
 
@@ -276,7 +273,7 @@ async def generate(request: Request):
     params = await request.json()
     uid = uuid.uuid4()
     threading.Thread(target=worker.generate, args=(uid, params,)).start()
-    ret = {'uid': str(uid)}
+    ret = {"uid": str(uid)}
 
     return JSONResponse(ret, status_code=200)
 
@@ -288,10 +285,10 @@ async def status(uid: str):
     print(save_file_path, os.path.exists(save_file_path))
 
     if not os.path.exists(save_file_path):
-        response = {'status': 'processing'}
+        response = {"status": "processing"}
     else:
-        base64_str = base64.b64encode(open(save_file_path, 'rb').read()).decode()
-        response = {'status': 'completed', 'model_base64': base64_str}
+        base64_str = base64.b64encode(open(save_file_path, "rb").read()).decode()
+        response = {"status": "completed", "model_base64": base64_str}
 
     return JSONResponse(response, status_code=200)
 

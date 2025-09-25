@@ -135,11 +135,23 @@ python api_server.py --host 127.0.0.1 --port 8080
 A demo post request for image to 3D without texture:
 
 ```bash
-img_b64_str=$(base64 -i assets/demo.png) \
+img_b64_str=$(base64 -i assets/demo.png)
 curl -X POST "http://localhost:8080/generate" \
      -H "Content-Type: application/json" \
      -d '{"image": "'"$img_b64_str"'"}' \
-     -o test2.glb;
+     -o test2.glb
+```
+
+```powershell
+$img_path = Resolve-Path "assets/demo.png"
+$img_bytes = [System.IO.File]::ReadAllBytes($img_path)
+$img_b64_str = [Convert]::ToBase64String($img_bytes)
+$json = @{image = $img_b64_str} | ConvertTo-Json -Compress
+Invoke-RestMethod -Uri "http://localhost:8080/generate" `
+                  -Method Post `
+                  -Body $json `
+                  -ContentType "application/json" `
+                  -OutFile "test2.glb"
 ```
 
 
@@ -152,8 +164,8 @@ You could assess **Hunyuan3D-DiT** via:
 ```python
 from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline
 
-pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained('tencent/Hunyuan3D-2')
-mesh = pipeline(image='assets/demo.png')[0]
+pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained("tencent/Hunyuan3D-2")
+mesh = pipeline(image="assets/demo.png")[0]
 ```
 
 The output mesh is a [trimesh object](https://trimesh.org/trimesh.html), which you could save to glb/obj (or other format) file.
