@@ -219,8 +219,7 @@ class MeshRender():
             min_bb = (self.vtx_pos - 0).min(0)[0]
             center = (max_bb + min_bb) / 2
             scale = torch.norm(self.vtx_pos - center, dim=1).max() * 2.0
-            self.vtx_pos = (self.vtx_pos - center) * \
-                           (scale_factor / float(scale))
+            self.vtx_pos = (self.vtx_pos - center) * (scale_factor / float(scale))
             self.scale_factor = scale_factor
 
     def set_texture(self, tex):
@@ -338,8 +337,7 @@ class MeshRender():
         mask = (image[..., [-1]] == 1).float()
         if bgcolor is None:
             bgcolor = [0 for _ in range(image.shape[-1] - 1)]
-        image = image * mask + (1 - mask) * \
-                torch.tensor(bgcolor + [0]).to(self.device)
+        image = image * mask + (1 - mask) * torch.tensor(bgcolor + [0]).to(self.device)
         if keep_alpha == False:
             image = image[..., :-1]
         if return_type == 'np':
@@ -383,8 +381,7 @@ class MeshRender():
         normal, _ = self.raster_interpolate(vertex_normals[None, ...], rast_out, self.pos_idx)
 
         visible_mask = torch.clamp(rast_out[..., -1:], 0, 1)
-        normal = normal * visible_mask + \
-                 torch.tensor(bg_color, dtype=torch.float32, device=self.device) * (1 - visible_mask)
+        normal = normal * visible_mask + torch.tensor(bg_color, dtype=torch.float32, device=self.device) * (1 - visible_mask)
 
         if normalize_rgb:
             normal = (normal + 1) * 0.5
@@ -477,9 +474,7 @@ class MeshRender():
 
         visible_mask = torch.clamp(rast_out[..., -1:], 0, 1)
 
-        position = position * visible_mask + \
-                   torch.tensor(bg_color, dtype=torch.float32, device=self.device) * (1 -
-                                                                                      visible_mask) 
+        position = position * visible_mask + torch.tensor(bg_color, dtype=torch.float32, device=self.device) * (1 - visible_mask)
         if self.use_antialias:
             position = self.raster_antialias(position, rast_out, pos_clip, self.pos_idx)
 

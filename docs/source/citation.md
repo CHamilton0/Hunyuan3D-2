@@ -15,13 +15,13 @@ If you found this repository helpful, please cite our reports:
 
 ```bibtex
 @misc{lai2025flashvdm,
-      title={Unleashing Vecset Diffusion Model for Fast Shape Generation}, 
+      title={Unleashing Vecset Diffusion Model for Fast Shape Generation},
       author={Zeqiang Lai and Yunfei Zhao and Zibo Zhao and Haolin Liu and Fuyun Wang and Huiwen Shi and Xianghui Yang and Qinxiang Lin and Jinwei Huang and Yuhong Liu and Jie Jiang and Chunchao Guo and Xiangyu Yue},
       year={2025},
       eprint={2503.16302},
       archivePrefix={arXiv},
       primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2503.16302}, 
+      url={https://arxiv.org/abs/2503.16302},
 }
 @misc{hunyuan3d22025tencent,
     title={Hunyuan3D 2.0: Scaling Diffusion Models for High Resolution Textured 3D Assets Generation},

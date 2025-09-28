@@ -3,7 +3,7 @@
 # The below Model in this distribution may have been modified by THL A29 Limited
 # ("Tencent Modifications"). All Tencent Modifications are Copyright (C) 2024 THL A29 Limited.
 
-# Copyright (C) 2024 THL A29 Limited, a Tencent company.  All rights reserved.
+# Copyright (C) 2024 THL A29 Limited, a Tencent company. All rights reserved.
 # The below software and/or models in this distribution may have been
 # modified by THL A29 Limited ("Tencent Modifications").
 # All Tencent Modifications are Copyright (C) THL A29 Limited.

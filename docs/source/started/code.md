@@ -16,8 +16,8 @@ The output mesh is a [trimesh object](https://trimesh.org/trimesh.html), which y
 For **Hunyuan3D-Paint**, do the following:
 
 ```python
-from hy3dgen.texgen import Hunyuan3DPaintPipeline
 from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline
+from hy3dgen.texgen import Hunyuan3DPaintPipeline
 
 # let's generate a mesh first
 pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained("tencent/Hunyuan3D-2")

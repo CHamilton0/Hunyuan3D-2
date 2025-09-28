@@ -41,8 +41,7 @@ class MoEGate(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        import torch.nn.init as init
-        init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
 
     def forward(self, hidden_states):
         bsz, seq_len, h = hidden_states.shape

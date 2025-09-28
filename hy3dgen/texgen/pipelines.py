@@ -21,8 +21,8 @@ from PIL import Image
 
 from .differentiable_renderer.mesh_render import MeshRender
 from .utils.dehighlight_utils import Light_Shadow_Remover
-from .utils.multiview_utils import Multiview_Diffusion_Net
 from .utils.imagesuper_utils import Image_Super_Net
+from .utils.multiview_utils import Multiview_Diffusion_Net
 from .utils.uv_warp_utils import mesh_uv_wrap
 
 logger = logging.getLogger(__name__)
@@ -184,15 +184,14 @@ class Hunyuan3DPaintPipeline:
             images_prompt.append(image_prompt)
 
         images_prompt = [self.recenter_image(image_prompt) for image_prompt in images_prompt]
-
         images_prompt = [self.models['delight_model'](image_prompt) for image_prompt in images_prompt]
 
         mesh = mesh_uv_wrap(mesh)
-
         self.render.load_mesh(mesh)
 
-        selected_camera_elevs, selected_camera_azims, selected_view_weights = \
-            self.config.candidate_camera_elevs, self.config.candidate_camera_azims, self.config.candidate_view_weights
+        selected_camera_elevs, selected_camera_azims, selected_view_weights = (
+            self.config.candidate_camera_elevs, self.config.candidate_camera_azims, self.config.candidate_view_weights,
+        )
 
         normal_maps = self.render_normal_multiview(selected_camera_elevs, selected_camera_azims, use_abs_coor=True)
         position_maps = self.render_position_multiview(selected_camera_elevs, selected_camera_azims)

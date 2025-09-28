@@ -56,7 +56,8 @@ class DiagonalGaussianDistribution(object):
                 return 0.5 * torch.mean(torch.pow(self.mean, 2) + self.var - 1.0 - self.logvar, dim=dims)
             else:
                 return 0.5 * torch.mean(
-                    torch.pow(self.mean - other.mean, 2) / other.var + self.var / other.var - 1.0 - self.logvar + other.logvar, dim=dims,
+                    torch.pow(self.mean - other.mean, 2) / other.var + self.var / other.var - 1.0 - self.logvar + other.logvar,
+                    dim=dims,
                 )
 
     def nll(self, sample, dims=(1, 2, 3)):
@@ -80,7 +81,7 @@ class VectsetVAE(nn.Module):
 
         # load ckpt
         if use_safetensors:
-            ckpt_path = ckpt_path.replace('.ckpt', '.safetensors')
+            ckpt_path = ckpt_path.replace(".ckpt", ".safetensors")
         if not os.path.exists(ckpt_path):
             raise FileNotFoundError(f"Model file {ckpt_path} not found.")
 
@@ -100,9 +101,10 @@ class VectsetVAE(nn.Module):
         return model
 
     @classmethod
-    def from_pretrained(cls, model_path, device='cuda', dtype=torch.float16, use_safetensors=True, variant='fp16', subfolder='hunyuan3d-vae-v2-0', **kwargs):
+    def from_pretrained(
+        cls, model_path, device: str | torch.device = 'cuda', dtype=torch.float16, use_safetensors=True, variant='fp16', subfolder='hunyuan3d-vae-v2-0', **kwargs,
+    ):
         config_path, ckpt_path = smart_load_model(model_path, subfolder=subfolder, use_safetensors=use_safetensors, variant=variant)
-
         return cls.from_single_file(ckpt_path, config_path, device=device, dtype=dtype, use_safetensors=use_safetensors, **kwargs)
 
     def init_from_ckpt(self, path, ignore_keys=()):
@@ -155,7 +157,7 @@ class ShapeVAE(VectsetVAE):
         self, *, num_latents: int, embed_dim: int, width: int, heads: int, num_decoder_layers: int, num_encoder_layers: int = 8, pc_size: int = 5120,
         pc_sharpedge_size: int = 5120, point_feats: int = 3, downsample_ratio: int = 20, geo_decoder_downsample_ratio: int = 1, geo_decoder_mlp_expand_ratio: int = 4,
         geo_decoder_ln_post: bool = True, num_freqs: int = 8, include_pi: bool = True, qkv_bias: bool = True, qk_norm: bool = False, label_type: str = "binary",
-        drop_path_rate: float = 0.0, scale_factor: float = 1.0, use_ln_post: bool = True, ckpt_path=None,
+        drop_path_rate: float = 0.0, scale_factor: float = 1.0, use_ln_post: bool = True, ckpt_path: str | None = None,
     ):
         super().__init__()
         self.geo_decoder_ln_post = geo_decoder_ln_post

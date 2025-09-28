@@ -113,7 +113,10 @@ def smart_load_model(model_path, subfolder, use_safetensors, variant):
             from huggingface_hub import snapshot_download
             # Download only specified subdirectory (只下载指定子目录)
             # Key modification: Pattern matching subfolders (关键修改：模式匹配子文件夹)
-            path = snapshot_download(repo_id=original_model_path, allow_patterns=[f"{subfolder}/{config_name}", f"{subfolder}/{ckpt_name}"])
+            path = snapshot_download(
+                repo_id=original_model_path,
+                allow_patterns=[os.path.join(subfolder, f) for f in [config_name, ckpt_name]],
+            )
             # Keep path splicing logic unchanged (保持路径拼接逻辑不变)
             model_path = os.path.join(path, subfolder)
         except ImportError:

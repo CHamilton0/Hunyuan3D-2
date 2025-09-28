@@ -17,8 +17,8 @@ import os
 from dataclasses import dataclass
 
 import torch
+import torch.nn as nn
 from einops import rearrange
-from torch import Tensor, nn
 
 scaled_dot_product_attention = nn.functional.scaled_dot_product_attention
 if os.environ.get('USE_SAGEATTN', '0') == '1':
@@ -29,13 +29,13 @@ if os.environ.get('USE_SAGEATTN', '0') == '1':
     scaled_dot_product_attention = sageattn
 
 
-def attention(q: Tensor, k: Tensor, v: Tensor, **kwargs) -> Tensor:
+def attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, **kwargs) -> torch.Tensor:
     x = scaled_dot_product_attention(q, k, v)
     x = rearrange(x, "B H L D -> B L (H D)")
     return x
 
 
-def timestep_embedding(t: Tensor, dim: int, max_period: int = 10000, time_factor: float = 1000.0):
+def timestep_embedding(t: torch.Tensor, dim: int, max_period: int = 10000, time_factor: float = 1000.0) -> torch.Tensor:
     """
     Create sinusoidal timestep embeddings.
 
@@ -73,7 +73,7 @@ class GELU(nn.Module):
         super().__init__()
         self.approximate = approximate
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return nn.functional.gelu(x, approximate=self.approximate)
 
 
@@ -84,7 +84,7 @@ class MLPEmbedder(nn.Module):
         self.silu = nn.SiLU()
         self.out_layer = nn.Linear(hidden_dim, hidden_dim, bias=True)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.out_layer(self.silu(self.in_layer(x)))
 
 
@@ -93,7 +93,7 @@ class RMSNorm(torch.nn.Module):
         super().__init__()
         self.scale = nn.Parameter(torch.ones(dim))
 
-    def forward(self, x: Tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x_dtype = x.dtype
         x = x.float()
         rrms = torch.rsqrt(torch.mean(x ** 2, dim=-1, keepdim=True) + 1e-6)
@@ -106,7 +106,7 @@ class QKNorm(torch.nn.Module):
         self.query_norm = RMSNorm(dim)
         self.key_norm = RMSNorm(dim)
 
-    def forward(self, q: Tensor, k: Tensor, v: Tensor) -> tuple[Tensor, Tensor]:
+    def forward(self, q: torch.Tensor, k: torch.Tensor, v: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         q = self.query_norm(q)
         k = self.key_norm(k)
         return q.to(v), k.to(v)
@@ -122,7 +122,7 @@ class SelfAttention(nn.Module):
         self.norm = QKNorm(head_dim)
         self.proj = nn.Linear(dim, dim)
 
-    def forward(self, x: Tensor, pe: Tensor) -> Tensor:
+    def forward(self, x: torch.Tensor, pe: torch.Tensor) -> torch.Tensor:
         qkv = self.qkv(x)
         q, k, v = rearrange(qkv, "B L (K H D) -> K B H L D", K=3, H=self.num_heads)
         q, k = self.norm(q, k, v)
@@ -133,9 +133,9 @@ class SelfAttention(nn.Module):
 
 @dataclass
 class ModulationOut:
-    shift: Tensor
-    scale: Tensor
-    gate: Tensor
+    shift: torch.Tensor
+    scale: torch.Tensor
+    gate: torch.Tensor
 
 
 class Modulation(nn.Module):
@@ -145,7 +145,7 @@ class Modulation(nn.Module):
         self.multiplier = 6 if double else 3
         self.lin = nn.Linear(dim, self.multiplier * dim, bias=True)
 
-    def forward(self, vec: Tensor) -> tuple[ModulationOut, ModulationOut | None]:
+    def forward(self, vec: torch.Tensor) -> tuple[ModulationOut, ModulationOut | None]:
         out = self.lin(nn.functional.silu(vec))[:, None, :]
         out = out.chunk(self.multiplier, dim=-1)
 
@@ -180,7 +180,7 @@ class DoubleStreamBlock(nn.Module):
             nn.Linear(mlp_hidden_dim, hidden_size, bias=True),
         )
 
-    def forward(self, img: Tensor, txt: Tensor, vec: Tensor, pe: Tensor) -> tuple[Tensor, Tensor]:
+    def forward(self, img: torch.Tensor, txt: torch.Tensor, vec: torch.Tensor, pe: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         img_mod1, img_mod2 = self.img_mod(vec)
         txt_mod1, txt_mod2 = self.txt_mod(vec)
 
@@ -236,7 +236,7 @@ class SingleStreamBlock(nn.Module):
         self.mlp_act = GELU(approximate="tanh")
         self.modulation = Modulation(hidden_size, double=False)
 
-    def forward(self, x: Tensor, vec: Tensor, pe: Tensor) -> Tensor:
+    def forward(self, x: torch.Tensor, vec: torch.Tensor, pe: torch.Tensor) -> torch.Tensor:
         mod, _ = self.modulation(vec)
 
         x_mod = (1 + mod.scale) * self.pre_norm(x) + mod.shift
@@ -259,7 +259,7 @@ class LastLayer(nn.Module):
         self.linear = nn.Linear(hidden_size, patch_size * patch_size * out_channels, bias=True)
         self.adaLN_modulation = nn.Sequential(nn.SiLU(), nn.Linear(hidden_size, 2 * hidden_size, bias=True))
 
-    def forward(self, x: Tensor, vec: Tensor) -> Tensor:
+    def forward(self, x: torch.Tensor, vec: torch.Tensor) -> torch.Tensor:
         shift, scale = self.adaLN_modulation(vec).chunk(2, dim=1)
         x = (1 + scale[:, None, :]) * self.norm_final(x) + shift[:, None, :]
         x = self.linear(x)
@@ -332,7 +332,7 @@ class Hunyuan3DDiT(nn.Module):
             print("Unexpected keys:", unexpected)
             print("Missing keys:", missing)
 
-    def forward(self, x, t, contexts, **kwargs) -> Tensor:
+    def forward(self, x, t, contexts, **kwargs) -> torch.Tensor:
         cond = contexts['main']
         latent = self.latent_in(x)
 

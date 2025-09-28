@@ -19,7 +19,6 @@ from typing import Any
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from diffusers.models import UNet2DConditionModel
 from diffusers.models.attention_processor import Attention
 from diffusers.models.transformers.transformer_2d import BasicTransformerBlock
@@ -67,13 +66,13 @@ class Basic2p5DTransformerBlock(nn.Module):
     def _initialize_attn_weights(self):
 
         if self.use_ma:
-            self.attn_multiview.load_state_dict(self.attn1.state_dict()) 
+            self.attn_multiview.load_state_dict(self.attn1.state_dict())
             with torch.no_grad():
                 for layer in self.attn_multiview.to_out:
                     for param in layer.parameters():
                         param.zero_()
         if self.use_ra:
-            self.attn_refview.load_state_dict(self.attn1.state_dict()) 
+            self.attn_refview.load_state_dict(self.attn1.state_dict())
             with torch.no_grad():
                 for layer in self.attn_refview.to_out:
                     for param in layer.parameters():
@@ -501,7 +500,7 @@ class UNet2p5DConditionModel(nn.Module):
                 'mode': 'r',
                 'num_in_batch': N_gen,
                 'condition_embed_dict': condition_embed_dict,
-                'position_attn_mask': position_attn_mask, 
+                'position_attn_mask': position_attn_mask,
                 'position_voxel_indices': position_voxel_indices,
                 'mva_scale': mva_scale,
                 'ref_scale': ref_scale,

@@ -17,7 +17,6 @@
 import asyncio
 import base64
 import logging
-import logging.handlers
 import os
 import sys
 import tempfile
@@ -36,7 +35,6 @@ from fastapi.responses import JSONResponse, FileResponse
 from hy3dgen.rembg import BackgroundRemover
 from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline, FloaterRemover, DegenerateFaceRemover, FaceReducer, MeshSimplifier
 from hy3dgen.texgen import Hunyuan3DPaintPipeline
-from hy3dgen.text2image import HunyuanDiTPipeline
 
 LOGDIR = "."
 
@@ -103,7 +101,7 @@ class StreamToLogger(object):
         self.linebuf = ""
         for line in temp_linebuf.splitlines(True):
             # From the io.TextIOWrapper docs:
-            #   On output, if newline is None, any "\n" characters written are translated to the system default line separator.
+            # > On output, if newline is None, any "\n" characters written are translated to the system default line separator.
             # By default sys.stdout.write() expects "\n" newlines and then translates them so this is still cross platform.
             if line[-1] == "\n":
                 self.logger.log(self.log_level, line.rstrip())
@@ -212,10 +210,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],        # You can specify allowed origins (你可以指定允许的来源)
+    allow_origins=["*"],  # You can specify allowed origins (你可以指定允许的来源)
     allow_credentials=True,
-    allow_methods=["*"],        # Allow all methods (允许所有方法)
-    allow_headers=["*"],        # Allow all headers (允许所有头部)
+    allow_methods=["*"],  # Allow all methods (允许所有方法)
+    allow_headers=["*"],  # Allow all headers (允许所有头部)
 )
 
 

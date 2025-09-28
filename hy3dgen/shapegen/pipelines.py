@@ -213,14 +213,14 @@ class Hunyuan3DDiTPipeline:
         self.conditioner = torch.compile(self.conditioner)
 
     def enable_flashvdm(self, enabled: bool = True, adaptive_kv_selection=True, topk_mode='mean', mc_algo='mc', replace_vae=True):
+        model_path = self.kwargs['from_pretrained_kwargs']['model_path']
+        model_name = os.path.split(model_path)[-1]
         if enabled:
-            model_path = self.kwargs['from_pretrained_kwargs']['model_path']
             turbo_vae_mapping = {
                 'Hunyuan3D-2': ('tencent/Hunyuan3D-2', 'hunyuan3d-vae-v2-0-turbo'),
                 'Hunyuan3D-2mv': ('tencent/Hunyuan3D-2', 'hunyuan3d-vae-v2-0-turbo'),
                 'Hunyuan3D-2mini': ('tencent/Hunyuan3D-2mini', 'hunyuan3d-vae-v2-mini-turbo'),
             }
-            model_name = model_path.split('/')[-1]
             if replace_vae and model_name in turbo_vae_mapping:
                 model_path, subfolder = turbo_vae_mapping[model_name]
                 self.vae = ShapeVAE.from_pretrained(
@@ -228,13 +228,11 @@ class Hunyuan3DDiTPipeline:
                 )
             self.vae.enable_flashvdm_decoder(enabled=enabled, adaptive_kv_selection=adaptive_kv_selection, topk_mode=topk_mode, mc_algo=mc_algo)
         else:
-            model_path = self.kwargs['from_pretrained_kwargs']['model_path']
             vae_mapping = {
                 'Hunyuan3D-2': ('tencent/Hunyuan3D-2', 'hunyuan3d-vae-v2-0'),
                 'Hunyuan3D-2mv': ('tencent/Hunyuan3D-2', 'hunyuan3d-vae-v2-0'),
                 'Hunyuan3D-2mini': ('tencent/Hunyuan3D-2mini', 'hunyuan3d-vae-v2-mini'),
             }
-            model_name = model_path.split('/')[-1]
             if model_name in vae_mapping:
                 model_path, subfolder = vae_mapping[model_name]
                 self.vae = ShapeVAE.from_pretrained(model_path, subfolder=subfolder)
@@ -280,7 +278,7 @@ class Hunyuan3DDiTPipeline:
         ----------
         gpu_id : int, optional, default=0
             The ID of the accelerator that shall be used in inference.
-        device : torch.Device | str, optional, default='cuda'
+        device : torch.device | str, optional, default='cuda'
             The PyTorch device type of the accelerator that shall be used in inference.
         """
 
@@ -446,7 +444,7 @@ class Hunyuan3DDiTPipeline:
 
         return cond_input
 
-    def get_guidance_scale_embedding(self, w, embedding_dim=512, dtype=torch.float32):
+    def get_guidance_scale_embedding(self, w: torch.Tensor, embedding_dim: int = 512, dtype: torch.dtype = torch.float32):
         """
         See [GitHub repo](https://github.com/google-research/vdm/blob/dc27b98a554f65cdc654b800da5aa1846545d41b/model_vdm.py#L298).
 
@@ -592,7 +590,7 @@ class Hunyuan3DDiTFlowMatchingPipeline(Hunyuan3DDiTPipeline):
 
         device = self.device
         dtype = self.dtype
-        do_classifier_free_guidance = guidance_scale >= 0 and not (hasattr(self.model, 'guidance_embed') and self.model.guidance_embed is True)
+        do_classifier_free_guidance = guidance_scale >= 0 and not (hasattr(self.model, 'guidance_embed') and self.model.guidance_embed)
 
         cond_inputs = self.prepare_image(image)
         image = cond_inputs.pop('image')
@@ -610,8 +608,7 @@ class Hunyuan3DDiTFlowMatchingPipeline(Hunyuan3DDiTPipeline):
         latents = self.prepare_latents(batch_size, dtype, device, generator)
 
         guidance = None
-        if hasattr(self.model, 'guidance_embed') and \
-            self.model.guidance_embed is True:
+        if hasattr(self.model, 'guidance_embed') and self.model.guidance_embed:
             guidance = torch.tensor([guidance_scale] * batch_size, device=device, dtype=dtype)
             # logger.info(f"Using guidance embed with scale {guidance_scale}")
 

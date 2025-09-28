@@ -145,7 +145,7 @@ def LoadGlb(path):
         for idx in node.children:
             parents[idx] = node_index
     # for i in range(len(gltf.nodes)):
-    #    get_world_transform(gltf, i, parents, world_transform)
+    #     get_world_transform(gltf, i, parents, world_transform)
 
     for node_index, node in enumerate(gltf.nodes):
         if node.mesh is not None:

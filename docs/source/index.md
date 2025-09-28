@@ -6,7 +6,7 @@ hide-toc: true
 
 ```{toctree}
 :maxdepth: 3
-:hidden: 
+:hidden:
 
 Installation <installation/index>
 Get Started <started/index>
@@ -42,19 +42,19 @@ The system includes the following foundation components:
     <a class="reference internal" href="started/quicktour.html">
       <b>Quicktour</b>
       <p style="color:var(--color-content-foreground)">
-        Learn the fundamentals of using ∇-Prox. We recommend starting here if you are using 🎉 ∇-Prox for the first time! 
+        Learn the fundamentals of using ∇-Prox. We recommend starting here if you are using 🎉 ∇-Prox for the first time!
       </p>
     </a>
     <a class="reference internal" href="tutorials/index.html">
       <b>Tutorials</b>
       <p style="color:var(--color-content-foreground)">
-        Understand the design of the library and the mathematics behind the code. 
+        Understand the design of the library and the mathematics behind the code.
       </p>
     </a>
     <a class="reference internal" href="api/index.html">
       <b>API Documentation</b>
       <p style="color:var(--color-content-foreground)">
-        Explore the complete reference guide. Useful if you want to develop programs with ∇-Prox. 
+        Explore the complete reference guide. Useful if you want to develop programs with ∇-Prox.
       </p>
     </a>
   </div>

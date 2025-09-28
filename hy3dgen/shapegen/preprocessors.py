@@ -40,7 +40,7 @@ class ImageProcessorV2:
         Parameters
         ----------
         image : np.ndarray[float | uint8]
-            Input image. SHape: [H, W, 3/4].
+            Input image. Shape: [H, W, 3 | 4].
         mask : np.ndarray[bool]
             Alpha mask. Shape: [H, W].
         border_ratio : float, optional, default=0.2
@@ -49,7 +49,7 @@ class ImageProcessorV2:
         Returns
         -------
         outputs : np.ndarray[float | uint8]
-            Output image. Shape: [H, W, 3/4].
+            Output image. Shape: [H, W, 3 | 4].
         """
 
         if image.shape[-1] == 4:

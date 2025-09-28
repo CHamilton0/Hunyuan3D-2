@@ -18,7 +18,6 @@ import os
 import torch
 import torch.nn as nn
 from einops import rearrange
-from torch import Tensor
 
 from .attention_processors import CrossAttentionProcessor
 from ...utils import logger
@@ -48,8 +47,8 @@ class FourierEmbedder(nn.Module):
             cos(f_2 * x[..., i]),
             ...
             cos(f_N * x[..., i]),
-            x[..., i]     # only present if include_input is True.
-        ], # here f_i is the frequency.
+            x[..., i]  # only present if include_input is True.
+        ],  # here f_i is the frequency.
     ```
 
     Denote the space is `[0 / num_freqs, 1 / num_freqs, 2 / num_freqs, 3 / num_freqs, ..., (num_freqs - 1) / num_freqs]`. If `logspace` is True, frequency `f_i` is
@@ -374,8 +373,8 @@ class CrossAttentionDecoder(nn.Module):
 
 
 def fps(
-    src: Tensor, batch: Tensor | None = None, ratio: Tensor | float | None = None, random_start: bool = True, batch_size: int | None = None,
-    ptr: Tensor | list[int] | None = None,
+    src: torch.Tensor, batch: torch.Tensor | None = None, ratio: torch.Tensor | float | None = None, random_start: bool = True, batch_size: int | None = None,
+    ptr: torch.Tensor | list[int] | None = None,
 ):
     src = src.float()
     from torch_cluster import fps as fps_fn
@@ -521,7 +520,7 @@ class PointCrossAttentionEncoder(nn.Module):
         Returns
         -------
         latents : Any
-        pc_infos : list[Tensor]
+        pc_infos : list[torch.Tensor]
         """
 
         query, data, pc_infos = self.sample_points_and_latents(pc, feats)

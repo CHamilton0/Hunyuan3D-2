@@ -15,13 +15,10 @@
 from collections.abc import Callable
 from typing import Any
 
-import numpy
 import numpy as np
 import torch
-import torch.distributed
-import torch.utils.checkpoint
 from PIL import Image
-from diffusers import AutoencoderKL, DDPMScheduler, DiffusionPipeline, EulerAncestralDiscreteScheduler, UNet2DConditionModel, ImagePipelineOutput
+from diffusers import AutoencoderKL, DiffusionPipeline, ImagePipelineOutput
 from diffusers.callbacks import MultiPipelineCallbacks, PipelineCallback
 from diffusers.image_processor import PipelineImageInput, VaeImageProcessor
 from diffusers.pipelines.stable_diffusion.pipeline_output import StableDiffusionPipelineOutput
@@ -29,7 +26,7 @@ from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import Stabl
 from diffusers.schedulers.scheduling_utils import KarrasDiffusionSchedulers
 from diffusers.utils.deprecation_utils import deprecate
 from einops import rearrange
-from transformers import CLIPImageProcessor, CLIPTextModel, CLIPTokenizer, CLIPVisionModelWithProjection
+from transformers import CLIPImageProcessor, CLIPTextModel, CLIPTokenizer
 
 from .unet.modules import UNet2p5DConditionModel, compute_multi_resolution_mask, compute_multi_resolution_discrete_voxel_indice
 
@@ -86,12 +83,12 @@ def scalings_for_boundary_conditions(timestep, sigma_data=0.5, timestep_scaling=
 def get_predicted_original_sample(model_output, timesteps, sample, prediction_type, alphas, sigmas, N_gen):
     alphas = extract_into_tensor(alphas, timesteps, sample.shape, N_gen)
     sigmas = extract_into_tensor(sigmas, timesteps, sample.shape, N_gen)
-    model_output = rearrange(model_output, '(b n) c h w -> b n c h w', n=N_gen)
-    if prediction_type == "epsilon":
+    model_output = rearrange(model_output, "(b n) c h w -> b n c h w", n=N_gen)
+    if prediction_type == 'epsilon':
         pred_x_0 = (sample - sigmas * model_output) / alphas
-    elif prediction_type == "sample":
+    elif prediction_type == 'sample':
         pred_x_0 = model_output
-    elif prediction_type == "v_prediction":
+    elif prediction_type == 'v_prediction':
         pred_x_0 = alphas * sample - sigmas * model_output
     else:
         raise ValueError(f"Prediction type {prediction_type} is not supported; currently, `epsilon`, `sample`, and `v_prediction` are supported.")
@@ -103,12 +100,12 @@ def get_predicted_original_sample(model_output, timesteps, sample, prediction_ty
 def get_predicted_noise(model_output, timesteps, sample, prediction_type, alphas, sigmas, N_gen):
     alphas = extract_into_tensor(alphas, timesteps, sample.shape, N_gen)
     sigmas = extract_into_tensor(sigmas, timesteps, sample.shape, N_gen)
-    model_output = rearrange(model_output, '(b n) c h w -> b n c h w', n=N_gen)
-    if prediction_type == "epsilon":
+    model_output = rearrange(model_output, "(b n) c h w -> b n c h w", n=N_gen)
+    if prediction_type == 'epsilon':
         pred_epsilon = model_output
-    elif prediction_type == "sample":
+    elif prediction_type == 'sample':
         pred_epsilon = (sample - alphas * model_output) / sigmas
-    elif prediction_type == "v_prediction":
+    elif prediction_type == 'v_prediction':
         pred_epsilon = alphas * model_output + sigmas * sample
     else:
         raise ValueError(f"Prediction type {prediction_type} is not supported; currently, `epsilon`, `sample`, and `v_prediction` are supported.")
@@ -119,7 +116,7 @@ def extract_into_tensor(a, t, x_shape, N_gen):
     # b, *_ = t.shape
     out = a.gather(-1, t)
     out = out.repeat(N_gen)
-    out = rearrange(out, '(b n) -> b n', n=N_gen)
+    out = rearrange(out, "(b n) -> b n", n=N_gen)
     b, c, *_ = out.shape
     return out.reshape(b, c, *((1,) * (len(x_shape) - 2)))
 
@@ -171,7 +168,7 @@ def to_rgb_image(maybe_rgba: Image.Image):
         return maybe_rgba
     elif maybe_rgba.mode == 'RGBA':
         rgba = maybe_rgba
-        img = numpy.random.randint(127, 128, size=[rgba.size[1], rgba.size[0], 3], dtype=numpy.uint8)
+        img = np.random.randint(127, 128, size=[rgba.size[1], rgba.size[0], 3], dtype=np.uint8)
         img = Image.fromarray(img, 'RGB')
         img.paste(rgba, mask=rgba.getchannel('A'))
         return img
@@ -206,20 +203,20 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
     @torch.no_grad()
     def encode_images(self, images):
         B = images.shape[0]
-        images = rearrange(images, 'b n c h w -> (b n) c h w')
+        images = rearrange(images, "b n c h w -> (b n) c h w")
 
         dtype = next(self.vae.parameters()).dtype
         images = (images - 0.5) * 2.0
         posterior = self.vae.encode(images.to(dtype)).latent_dist
         latents = posterior.sample() * self.vae.config.scaling_factor
 
-        latents = rearrange(latents, '(b n) c h w -> b n c h w', b=B)
+        latents = rearrange(latents, "(b n) c h w -> b n c h w", b=B)
         return latents
 
     @torch.no_grad()
     def __call__(
-        self, image: Image.Image | None = None, prompt: str | None = None, negative_prompt: str = 'watermark, ugly, deformed, noisy, blurry, low contrast', *args,
-        num_images_per_prompt: int = 1, guidance_scale: float = 2.0, output_type: str = "pil", width: int = 512, height: int = 512, num_inference_steps: int = 28,
+        self, image: Image.Image | None = None, prompt: str | None = None, negative_prompt: str = "watermark, ugly, deformed, noisy, blurry, low contrast", *args,
+        num_images_per_prompt: int = 1, guidance_scale: float = 2.0, output_type: str = 'pil', width: int = 512, height: int = 512, num_inference_steps: int = 28,
         return_dict: bool = True, **cached_condition,
     ):
         device = self._execution_device
@@ -250,11 +247,11 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
             for batch_imgs in images:
                 view_imgs = []
                 for pil_img in batch_imgs:
-                    img = numpy.asarray(pil_img, dtype=numpy.float32) / 255.
+                    img = np.asarray(pil_img, dtype=np.float32) / 255.
                     if img.shape[2] > 3:
                         alpha = img[:, :, 3:]
                         img = img[:, :, :3] * alpha + bg_c * (1 - alpha)
-                    img = torch.from_numpy(img).permute(2, 0, 1).unsqueeze(0).contiguous().half().to("cuda")
+                    img = torch.from_numpy(img).permute(2, 0, 1).unsqueeze(0).contiguous().half().to('cuda')
                     view_imgs.append(img)
                 view_imgs = torch.cat(view_imgs, dim=0)
                 images_tensor.append(view_imgs.unsqueeze(0))
@@ -262,20 +259,20 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
             images_tensor = torch.cat(images_tensor, dim=0)
             return images_tensor
 
-        if "normal_imgs" in cached_condition:
+        if 'normal_imgs' in cached_condition:
 
-            if isinstance(cached_condition["normal_imgs"], list):
-                cached_condition["normal_imgs"] = convert_pil_list_to_tensor(cached_condition["normal_imgs"])
+            if isinstance(cached_condition['normal_imgs'], list):
+                cached_condition['normal_imgs'] = convert_pil_list_to_tensor(cached_condition['normal_imgs'])
 
-            cached_condition['normal_imgs'] = self.encode_images(cached_condition["normal_imgs"])
+            cached_condition['normal_imgs'] = self.encode_images(cached_condition['normal_imgs'])
 
-        if "position_imgs" in cached_condition:
+        if 'position_imgs' in cached_condition:
 
-            if isinstance(cached_condition["position_imgs"], list):
-                cached_condition["position_imgs"] = convert_pil_list_to_tensor(cached_condition["position_imgs"])
+            if isinstance(cached_condition['position_imgs'], list):
+                cached_condition['position_imgs'] = convert_pil_list_to_tensor(cached_condition['position_imgs'])
 
             cached_condition['position_maps'] = cached_condition['position_imgs']
-            cached_condition["position_imgs"] = self.encode_images(cached_condition["position_imgs"])
+            cached_condition['position_imgs'] = self.encode_images(cached_condition['position_imgs'])
 
         if 'camera_info_gen' in cached_condition:
             camera_info = cached_condition['camera_info_gen']  # B, N
@@ -301,10 +298,10 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
             negative_ref_latents = torch.zeros_like(cached_condition['ref_latents'])
             cached_condition['ref_latents'] = torch.cat([negative_ref_latents, cached_condition['ref_latents']])
             cached_condition['ref_scale'] = torch.as_tensor([0.0, 1.0]).to(cached_condition['ref_latents'])
-            if "normal_imgs" in cached_condition:
+            if 'normal_imgs' in cached_condition:
                 cached_condition['normal_imgs'] = torch.cat((cached_condition['normal_imgs'], cached_condition['normal_imgs']))
 
-            if "position_imgs" in cached_condition:
+            if 'position_imgs' in cached_condition:
                 cached_condition['position_imgs'] = torch.cat((cached_condition['position_imgs'], cached_condition['position_imgs']))
 
             if 'position_maps' in cached_condition:
@@ -420,16 +417,16 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
             the corresponding generated image contains "not-safe-for-work" (nsfw) content.
         """
 
-        callback = kwargs.pop("callback", None)
-        callback_steps = kwargs.pop("callback_steps", None)
+        callback = kwargs.pop('callback', None)
+        callback_steps = kwargs.pop('callback_steps', None)
 
         if callback is not None:
             deprecate(
-                "callback", "1.0.0", "Passing `callback` as an input argument to `__call__` is deprecated,", "consider using `callback_on_step_end`",
+                'callback', '1.0.0', "Passing `callback` as an input argument to `__call__` is deprecated,", "consider using `callback_on_step_end`",
             )
         if callback_steps is not None:
             deprecate(
-                "callback_steps", "1.0.0", "Passing `callback_steps` as an input argument to `__call__` is deprecated,", "consider using `callback_on_step_end`",
+                'callback_steps', '1.0.0', "Passing `callback_steps` as an input argument to `__call__` is deprecated,", "consider using `callback_on_step_end`",
             )
 
         if isinstance(callback_on_step_end, (PipelineCallback, MultiPipelineCallbacks)):
@@ -463,7 +460,7 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
         device = self._execution_device
 
         # 3. Encode input prompt
-        lora_scale = (self.cross_attention_kwargs.get("scale", None) if self.cross_attention_kwargs is not None else None)
+        lora_scale = (self.cross_attention_kwargs.get('scale', None) if self.cross_attention_kwargs is not None else None)
 
         prompt_embeds, negative_prompt_embeds = self.encode_prompt(
             prompt, device, num_images_per_prompt, self.do_classifier_free_guidance if self.is_turbo else False,
@@ -482,7 +479,7 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
                 self.do_classifier_free_guidance if self.is_turbo else False,
             )
 
-        # 4. Prepare 
+        # 4. Prepare
         if self.is_turbo:
             bsz = 3
             N_gen = 15
@@ -507,7 +504,7 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
 
         # 6.1 Add image embeds for IP-Adapter
         added_cond_kwargs = (
-            {"image_embeds": image_embeds} if (ip_adapter_image is not None or ip_adapter_image_embeds is not None) else None
+            {'image_embeds': image_embeds} if (ip_adapter_image is not None or ip_adapter_image_embeds is not None) else None
         )
 
         # 6.2 Optionally get Guidance Scale Embedding
@@ -527,13 +524,13 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
                     continue
 
                 # expand the latents if we are doing classifier free guidance
-                latents = rearrange(latents, '(b n) c h w -> b n c h w', n=kwargs['num_in_batch'])
+                latents = rearrange(latents, "(b n) c h w -> b n c h w", n=kwargs['num_in_batch'])
                 latent_model_input = (
                     torch.cat([latents] * 2) if ((self.do_classifier_free_guidance) and (not self.is_turbo)) else latents
                 )
-                latent_model_input = rearrange(latent_model_input, 'b n c h w -> (b n) c h w')
+                latent_model_input = rearrange(latent_model_input, "b n c h w -> (b n) c h w")
                 latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
-                latent_model_input = rearrange(latent_model_input, '(b n) c h w -> b n c h w', n=kwargs['num_in_batch'])
+                latent_model_input = rearrange(latent_model_input, "(b n) c h w -> b n c h w", n=kwargs['num_in_batch'])
 
                 # predict the noise residual
 
@@ -541,7 +538,7 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
                     latent_model_input, t, encoder_hidden_states=prompt_embeds, timestep_cond=timestep_cond, cross_attention_kwargs=self.cross_attention_kwargs,
                     added_cond_kwargs=added_cond_kwargs, return_dict=False, **kwargs,
                 )[0]
-                latents = rearrange(latents, 'b n c h w -> (b n) c h w')
+                latents = rearrange(latents, "b n c h w -> (b n) c h w")
                 # perform guidance
                 if (self.do_classifier_free_guidance) and (not self.is_turbo):
                     noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
@@ -552,8 +549,7 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
                     noise_pred = rescale_noise_cfg(noise_pred, noise_pred_text, guidance_rescale=self.guidance_rescale)
 
                 # compute the previous noisy sample x_t -> x_t-1
-                latents = \
-                    self.scheduler.step(noise_pred, t, latents[:, :num_channels_latents, :, :], **extra_step_kwargs, return_dict=False)[0]
+                latents = self.scheduler.step(noise_pred, t, latents[:, :num_channels_latents, :, :], **extra_step_kwargs, return_dict=False)[0]
 
                 if callback_on_step_end is not None:
                     callback_kwargs = {}
@@ -561,18 +557,18 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
                         callback_kwargs[k] = locals()[k]
                     callback_outputs = callback_on_step_end(self, i, t, callback_kwargs)
 
-                    latents = callback_outputs.pop("latents", latents)
-                    prompt_embeds = callback_outputs.pop("prompt_embeds", prompt_embeds)
-                    negative_prompt_embeds = callback_outputs.pop("negative_prompt_embeds", negative_prompt_embeds)
+                    latents = callback_outputs.pop('latents', latents)
+                    prompt_embeds = callback_outputs.pop('prompt_embeds', prompt_embeds)
+                    negative_prompt_embeds = callback_outputs.pop('negative_prompt_embeds', negative_prompt_embeds)
 
                 # call the callback, if provided
                 if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
                     progress_bar.update()
                     if callback is not None and i % callback_steps == 0:
-                        step_idx = i // getattr(self.scheduler, "order", 1)
+                        step_idx = i // getattr(self.scheduler, 'order', 1)
                         callback(step_idx, t, latents)
 
-        if not output_type == "latent":
+        if not output_type == 'latent':
             image = self.vae.decode(latents / self.vae.config.scaling_factor, return_dict=False, generator=generator)[0]
             image, has_nsfw_concept = self.run_safety_checker(image, device, prompt_embeds.dtype)
         else:

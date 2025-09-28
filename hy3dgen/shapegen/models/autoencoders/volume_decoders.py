@@ -234,8 +234,10 @@ class HierarchicalVolumeDecoding:
             nidx = torch.where(next_index > 0)
 
             next_points = torch.stack(nidx, dim=1)
-            next_points = (next_points * torch.tensor(resolution, dtype=next_points.dtype, device=device) +
-                           torch.tensor(bbox_min, dtype=next_points.dtype, device=device))
+            next_points = (
+                next_points * torch.tensor(resolution, dtype=next_points.dtype, device=device) +
+                torch.tensor(bbox_min, dtype=next_points.dtype, device=device)
+            )
             batch_logits = []
             for start in tqdm(range(0, next_points.shape[0], num_chunks), desc=f"Hierarchical Volume Decoding [r{octree_depth_now + 1}]"):
                 queries = next_points[start: start + num_chunks, :]
@@ -353,8 +355,10 @@ class FlashVDMVolumeDecoding:
             nidx = torch.where(next_index > 0)
 
             next_points = torch.stack(nidx, dim=1)
-            next_points = (next_points * torch.tensor(resolution, dtype=torch.float32, device=device) +
-                           torch.tensor(bbox_min, dtype=torch.float32, device=device))
+            next_points = (
+                next_points * torch.tensor(resolution, dtype=torch.float32, device=device) +
+                torch.tensor(bbox_min, dtype=torch.float32, device=device)
+            )
 
             query_grid_num = 6
             min_val = next_points.min(axis=0).values

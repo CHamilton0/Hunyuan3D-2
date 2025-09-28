@@ -220,7 +220,7 @@ def _gen_shape(
         octree_resolution=octree_resolution, num_chunks=num_chunks, output_type='mesh',
     )
     time_meta['shape generation'] = time.time() - start_time
-    logger.info("--- Shape generation takes %s seconds ---" % (time.time() - start_time))
+    logger.info(f"--- Shape generation takes %s seconds (using `device`={args.device}) ---" % (time.time() - start_time))
 
     tmp_start = time.time()
     mesh = export_to_trimesh(outputs)[0]
@@ -614,7 +614,7 @@ if __name__ == '__main__':
         t2i_worker = HunyuanDiTPipeline("Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled", device=args.device)
         HAS_T2I = True
 
-    from hy3dgen.shapegen import FaceReducer, FloaterRemover, DegenerateFaceRemover, MeshSimplifier, Hunyuan3DDiTFlowMatchingPipeline
+    from hy3dgen.shapegen import FaceReducer, FloaterRemover, DegenerateFaceRemover, Hunyuan3DDiTFlowMatchingPipeline
     from hy3dgen.shapegen.pipelines import export_to_trimesh
     from hy3dgen.rembg import BackgroundRemover
 

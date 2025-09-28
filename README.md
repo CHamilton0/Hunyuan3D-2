@@ -247,13 +247,13 @@ If you found this repository helpful, please cite our reports:
 
 ```bibtex
 @misc{lai2025hunyuan3d25highfidelity3d,
-      title={Hunyuan3D 2.5: Towards High-Fidelity 3D Assets Generation with Ultimate Details}, 
+      title={Hunyuan3D 2.5: Towards High-Fidelity 3D Assets Generation with Ultimate Details},
       author={Tencent Hunyuan3D Team},
       year={2025},
       eprint={2506.16504},
       archivePrefix={arXiv},
       primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2506.16504}, 
+      url={https://arxiv.org/abs/2506.16504},
 }
 
 @misc{hunyuan3d22025tencent,

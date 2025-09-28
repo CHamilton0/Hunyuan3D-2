@@ -37,13 +37,13 @@ class Img2img_Control_Ip_adapter:
     ):
         results = self.pipe(
             prompt=prompt, negative_prompt=negative_prompt, image=control_image, ip_adapter_image=ip_adapter_image, generator=torch.manual_seed(42), seed=42,
-            num_inference_steps=num_inference_steps, guidance_scale=guidance_scale, controlnet_conditioning_scale=controlnet_conditioning_scale, strength=1, # clip_skip=2,
+            num_inference_steps=num_inference_steps, guidance_scale=guidance_scale, controlnet_conditioning_scale=controlnet_conditioning_scale, strength=1, #clip_skip=2,
             height=height, width=width, output_type=output_type, **kwargs,
         ).images[0]
         return results
 
 
-################################################################
+# ---
 
 class HesModel:
     def __init__(self, ):

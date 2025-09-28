@@ -33,7 +33,7 @@ def get_1d_sincos_pos_embed_from_grid(embed_dim: int, pos: np.ndarray):
     ----------
     embed_dim : int
         Output dimension for each position.
-    pos : list | np.ndarray
+    pos : np.ndarray
         A list of positions to be encoded. Shape: [M,].
 
     Returns
@@ -265,20 +265,20 @@ class HunYuanDiTBlock(nn.Module):
         self.use_flash_attn = use_flash_attn
         use_ele_affine = True
 
-        # ========================= Self-Attention =========================
+        # --- Self-Attention ---
         self.norm1 = norm_layer(hidden_size, elementwise_affine=use_ele_affine, eps=1e-6)
         self.attn1 = Attention(hidden_size, num_heads=num_heads, qkv_bias=qkv_bias, qk_norm=qk_norm, norm_layer=qk_norm_layer)
 
-        # ========================= FFN =========================
+        # --- FFN ---
         self.norm2 = norm_layer(hidden_size, elementwise_affine=use_ele_affine, eps=1e-6)
 
-        # ========================= Add =========================
+        # --- Add ---
         # Simply use add like SDXL.
         self.timested_modulate = timested_modulate
         if self.timested_modulate:
             self.default_modulation = nn.Sequential(nn.SiLU(), nn.Linear(c_emb_size, hidden_size, bias=True))
 
-        # ========================= Cross-Attention =========================
+        # --- Cross-Attention ---
         self.attn2 = CrossAttention(
             hidden_size, text_states_dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_norm=qk_norm, norm_layer=qk_norm_layer,
             with_decoupled_ca=with_decoupled_ca, decoupled_ca_dim=decoupled_ca_dim, decoupled_ca_weight=decoupled_ca_weight, init_scale=init_scale,

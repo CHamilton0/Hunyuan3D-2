@@ -38,7 +38,7 @@ class Multiview_Diffusion_Net():
         elif config.pipe_name in ['hunyuanpaint-turbo']:
             pipeline.scheduler = LCMScheduler.from_config(pipeline.scheduler.config, timestep_spacing='trailing')
             pipeline.set_turbo(True)
-            # pipeline.prepare() 
+            # pipeline.prepare()
 
         pipeline.set_progress_bar_config(disable=True)
         self.pipeline = pipeline.to(self.device)

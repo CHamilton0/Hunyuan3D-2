@@ -46,7 +46,7 @@ class Light_Shadow_Remover():
         target_flat = flat_and_mask(target_image, alpha_channel)
         corrected_bgr = torch.zeros_like(src_image)
 
-        for i in range(3): 
+        for i in range(3):
             src_mean, src_stddev = torch.mean(src_flat[:, i]), torch.std(src_flat[:, i])
             target_mean, target_stddev = torch.mean(target_flat[:, i]), torch.std(target_flat[:, i])
             corrected_bgr[:, :, i] = torch.clamp((src_image[:, :, i] - scale * src_mean) * (target_stddev / src_stddev) + scale * target_mean, 0, 1)
@@ -55,7 +55,7 @@ class Light_Shadow_Remover():
         modify_mse = torch.mean((corrected_bgr - target_image) ** 2)
         if src_mse < modify_mse:
             corrected_bgr = torch.cat([src_image, alpha_channel], dim=-1)
-        else: 
+        else:
             corrected_bgr = torch.cat([corrected_bgr, alpha_channel], dim=-1)
 
         return corrected_bgr
