@@ -18,8 +18,7 @@ import torch
 
 def rasterize(pos, tri, resolution, clamp_depth=torch.zeros(0), use_depth_prior=0):
     assert (pos.device == tri.device)
-    findices, barycentric = custom_rasterizer_kernel.rasterize_image(pos[0], tri, clamp_depth, resolution[1],
-                                                                     resolution[0], 1e-6, use_depth_prior)
+    findices, barycentric = custom_rasterizer_kernel.rasterize_image(pos[0], tri, clamp_depth, resolution[1], resolution[0], 1e-6, use_depth_prior)
     return findices, barycentric
 
 

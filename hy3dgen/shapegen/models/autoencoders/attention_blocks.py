@@ -14,7 +14,6 @@
 
 
 import os
-from typing import Optional, Union, List
 
 import torch
 import torch.nn as nn
@@ -30,70 +29,60 @@ if os.environ.get('USE_SAGEATTN', '0') == '1':
     try:
         from sageattention import sageattn
     except ImportError:
-        raise ImportError('Please install the package "sageattention" to use this USE_SAGEATTN.')
+        raise ImportError("Please install the package 'sageattention' to use this USE_SAGEATTN.")
     scaled_dot_product_attention = sageattn
 
 
 class FourierEmbedder(nn.Module):
-    """The sin/cosine positional embedding. Given an input tensor `x` of shape [n_batch, ..., c_dim], it converts
-    each feature dimension of `x[..., i]` into:
+    """
+    The sin/cosine positional embedding. Given an input tensor `x` of shape [`n_batch`, ..., `c_dim`], it converts each feature dimension of `x[..., i]` into:
+    ```
         [
             sin(x[..., i]),
-            sin(f_1*x[..., i]),
-            sin(f_2*x[..., i]),
+            sin(f_1 * x[..., i]),
+            sin(f_2 * x[..., i]),
             ...
             sin(f_N * x[..., i]),
             cos(x[..., i]),
-            cos(f_1*x[..., i]),
-            cos(f_2*x[..., i]),
+            cos(f_1 * x[..., i]),
+            cos(f_2 * x[..., i]),
             ...
             cos(f_N * x[..., i]),
             x[..., i]     # only present if include_input is True.
-        ], here f_i is the frequency.
+        ], # here f_i is the frequency.
+    ```
 
-    Denote the space is [0 / num_freqs, 1 / num_freqs, 2 / num_freqs, 3 / num_freqs, ..., (num_freqs - 1) / num_freqs].
-    If logspace is True, then the frequency f_i is [2^(0 / num_freqs), ..., 2^(i / num_freqs), ...];
-    Otherwise, the frequencies are linearly spaced between [1.0, 2^(num_freqs - 1)].
+    Denote the space is `[0 / num_freqs, 1 / num_freqs, 2 / num_freqs, 3 / num_freqs, ..., (num_freqs - 1) / num_freqs]`. If `logspace` is True, frequency `f_i` is
+    `[2^(0 / num_freqs), ..., 2^(i / num_freqs), ...]`, otherwise, frequencies are linearly spaced between `[1.0, 2^(num_freqs - 1)]`.
 
-    Args:
-        num_freqs (int): the number of frequencies, default is 6;
-        logspace (bool): If logspace is True, then the frequency f_i is [..., 2^(i / num_freqs), ...],
-            otherwise, the frequencies are linearly spaced between [1.0, 2^(num_freqs - 1)];
-        input_dim (int): the input dimension, default is 3;
-        include_input (bool): include the input tensor or not, default is True.
+    Parameters
+    ----------
+    num_freqs : int, optional, default=6
+        The number of frequencies.
+    logspace : bool
+        If True, frequency `f_i` is `[2^(0 / num_freqs), ..., 2^(i / num_freqs), ...]`, otherwise, frequencies are linearly spaced between `[1.0, 2^(num_freqs - 1)]`.
+    input_dim : int, optional, default=3
+        The input dimension.
+    include_input : bool, optional, default=True
+        Include the input tensor or not.
 
-    Attributes:
-        frequencies (torch.Tensor): If logspace is True, then the frequency f_i is [..., 2^(i / num_freqs), ...],
-                otherwise, the frequencies are linearly spaced between [1.0, 2^(num_freqs - 1);
-
-        out_dim (int): the embedding size, if include_input is True, it is input_dim * (num_freqs * 2 + 1),
-            otherwise, it is input_dim * num_freqs * 2.
-
+    Attributes
+    ----------
+    frequencies : torch.Tensor
+        If `logspace` is True, frequency `f_i` is `[..., 2^(i / num_freqs), ...]`, otherwise, frequencies are linearly spaced between `[1.0, 2^(num_freqs - 1)]`.
+    out_dim : int
+        The embedding size, if `include_input` is True, it is `input_dim * (num_freqs * 2 + 1)`, otherwise, it is `input_dim * num_freqs * 2`.
     """
 
-    def __init__(self,
-                 num_freqs: int = 6,
-                 logspace: bool = True,
-                 input_dim: int = 3,
-                 include_input: bool = True,
-                 include_pi: bool = True) -> None:
-
-        """The initialization"""
+    def __init__(self, num_freqs: int = 6, logspace: bool = True, input_dim: int = 3, include_input: bool = True, include_pi: bool = True) -> None:
+        """The initialization."""
 
         super().__init__()
 
         if logspace:
-            frequencies = 2.0 ** torch.arange(
-                num_freqs,
-                dtype=torch.float32
-            )
+            frequencies = 2.0 ** torch.arange(num_freqs, dtype=torch.float32)
         else:
-            frequencies = torch.linspace(
-                1.0,
-                2.0 ** (num_freqs - 1),
-                num_freqs,
-                dtype=torch.float32
-            )
+            frequencies = torch.linspace(1.0, 2.0 ** (num_freqs - 1), num_freqs, dtype=torch.float32)
 
         if include_pi:
             frequencies *= torch.pi
@@ -107,18 +96,21 @@ class FourierEmbedder(nn.Module):
     def get_dims(self, input_dim):
         temp = 1 if self.include_input or self.num_freqs == 0 else 0
         out_dim = input_dim * (self.num_freqs * 2 + temp)
-
         return out_dim
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """ Forward process.
+        """
+        Forward process.
 
-        Args:
-            x: tensor of shape [..., dim]
+        Parameters
+        ----------
+        x : torch.Tensor
+            Shape: [..., `dim`].
 
-        Returns:
-            embedding: an embedding of `x` of shape [..., dim * (num_freqs * 2 + temp)]
-                where temp is 1 if include_input is True and 0 otherwise.
+        Returns
+        -------
+        embedding : torch.Tensor
+            An embedding of `x` of shape [..., `dim * (num_freqs * 2 + temp)`] where `temp` is 1 if `include_input` is True and 0 otherwise.
         """
 
         if self.num_freqs > 0:
@@ -132,8 +124,7 @@ class FourierEmbedder(nn.Module):
 
 
 class DropPath(nn.Module):
-    """Drop paths (Stochastic Depth) per sample  (when applied in main path of residual blocks).
-    """
+    """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
 
     def __init__(self, drop_prob: float = 0., scale_by_keep: bool = True):
         super(DropPath, self).__init__()
@@ -141,15 +132,14 @@ class DropPath(nn.Module):
         self.scale_by_keep = scale_by_keep
 
     def forward(self, x):
-        """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
-
-        This is the same as the DropConnect impl I created for EfficientNet, etc networks, however,
-        the original name is misleading as 'Drop Connect' is a different form of dropout in a separate paper...
-        See discussion: https://github.com/tensorflow/tpu/issues/494#issuecomment-532968956 ... I've opted for
-        changing the layer and argument names to 'drop path' rather than mix DropConnect as a layer name and use
-        'survival rate' as the argument.
-
         """
+        Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
+
+        This is the same as the DropConnect impl I created for EfficientNet, etc networks, however, the original name is misleading as 'Drop Connect' is a different
+        form of dropout in a separate paper... See discussion: https://github.com/tensorflow/tpu/issues/494#issuecomment-532968956
+        I've opted for changing the layer and argument names to 'drop path' rather than mix DropConnect as a layer name and use 'survival rate' as the argument.
+        """
+
         if self.drop_prob == 0. or not self.training:
             return x
         keep_prob = 1 - self.drop_prob
@@ -164,13 +154,7 @@ class DropPath(nn.Module):
 
 
 class MLP(nn.Module):
-    def __init__(
-        self, *,
-        width: int,
-        expand_ratio: int = 4,
-        output_width: int = None,
-        drop_path_rate: float = 0.0
-    ):
+    def __init__(self, *, width: int, expand_ratio: int = 4, output_width: int | None = None, drop_path_rate: float = 0.0):
         super().__init__()
         self.width = width
         self.c_fc = nn.Linear(width, width * expand_ratio)
@@ -183,15 +167,7 @@ class MLP(nn.Module):
 
 
 class QKVMultiheadCrossAttention(nn.Module):
-    def __init__(
-        self,
-        *,
-        heads: int,
-        n_data: Optional[int] = None,
-        width=None,
-        qk_norm=False,
-        norm_layer=nn.LayerNorm
-    ):
+    def __init__(self, *, heads: int, n_data: int | None = None, width=None, qk_norm=False, norm_layer=nn.LayerNorm):
         super().__init__()
         self.heads = heads
         self.n_data = n_data
@@ -218,16 +194,8 @@ class QKVMultiheadCrossAttention(nn.Module):
 
 class MultiheadCrossAttention(nn.Module):
     def __init__(
-        self,
-        *,
-        width: int,
-        heads: int,
-        qkv_bias: bool = True,
-        n_data: Optional[int] = None,
-        data_width: Optional[int] = None,
-        norm_layer=nn.LayerNorm,
-        qk_norm: bool = False,
-        kv_cache: bool = False,
+        self, *, width: int, heads: int, qkv_bias: bool = True, n_data: int | None = None, data_width: int | None = None, norm_layer=nn.LayerNorm,
+        qk_norm: bool = False, kv_cache: bool = False,
     ):
         super().__init__()
         self.n_data = n_data
@@ -237,13 +205,7 @@ class MultiheadCrossAttention(nn.Module):
         self.c_q = nn.Linear(width, width, bias=qkv_bias)
         self.c_kv = nn.Linear(self.data_width, width * 2, bias=qkv_bias)
         self.c_proj = nn.Linear(width, width)
-        self.attention = QKVMultiheadCrossAttention(
-            heads=heads,
-            n_data=n_data,
-            width=width,
-            norm_layer=norm_layer,
-            qk_norm=qk_norm
-        )
+        self.attention = QKVMultiheadCrossAttention(heads=heads, n_data=n_data, width=width, norm_layer=norm_layer, qk_norm=qk_norm)
         self.kv_cache = kv_cache
         self.data = None
 
@@ -252,7 +214,7 @@ class MultiheadCrossAttention(nn.Module):
         if self.kv_cache:
             if self.data is None:
                 self.data = self.c_kv(data)
-                logger.info('Save kv cache,this should be called only once for one mesh')
+                logger.info("Save kv cache, this should be called only once for one mesh.")
             data = self.data
         else:
             data = self.c_kv(data)
@@ -263,16 +225,8 @@ class MultiheadCrossAttention(nn.Module):
 
 class ResidualCrossAttentionBlock(nn.Module):
     def __init__(
-        self,
-        *,
-        n_data: Optional[int] = None,
-        width: int,
-        heads: int,
-        mlp_expand_ratio: int = 4,
-        data_width: Optional[int] = None,
-        qkv_bias: bool = True,
-        norm_layer=nn.LayerNorm,
-        qk_norm: bool = False
+        self, *, n_data: int | None = None, width: int, heads: int, mlp_expand_ratio: int = 4, data_width: int | None = None, qkv_bias: bool = True,
+        norm_layer=nn.LayerNorm, qk_norm: bool = False,
     ):
         super().__init__()
 
@@ -280,13 +234,7 @@ class ResidualCrossAttentionBlock(nn.Module):
             data_width = width
 
         self.attn = MultiheadCrossAttention(
-            n_data=n_data,
-            width=width,
-            heads=heads,
-            data_width=data_width,
-            qkv_bias=qkv_bias,
-            norm_layer=norm_layer,
-            qk_norm=qk_norm
+            n_data=n_data, width=width, heads=heads, data_width=data_width, qkv_bias=qkv_bias, norm_layer=norm_layer, qk_norm=qk_norm,
         )
         self.ln_1 = norm_layer(width, elementwise_affine=True, eps=1e-6)
         self.ln_2 = norm_layer(data_width, elementwise_affine=True, eps=1e-6)
@@ -300,15 +248,7 @@ class ResidualCrossAttentionBlock(nn.Module):
 
 
 class QKVMultiheadAttention(nn.Module):
-    def __init__(
-        self,
-        *,
-        heads: int,
-        n_ctx: int,
-        width=None,
-        qk_norm=False,
-        norm_layer=nn.LayerNorm
-    ):
+    def __init__(self, *, heads: int, n_ctx: int, width=None, qk_norm=False, norm_layer=nn.LayerNorm):
         super().__init__()
         self.heads = heads
         self.n_ctx = n_ctx
@@ -330,30 +270,14 @@ class QKVMultiheadAttention(nn.Module):
 
 
 class MultiheadAttention(nn.Module):
-    def __init__(
-        self,
-        *,
-        n_ctx: int,
-        width: int,
-        heads: int,
-        qkv_bias: bool,
-        norm_layer=nn.LayerNorm,
-        qk_norm: bool = False,
-        drop_path_rate: float = 0.0
-    ):
+    def __init__(self, *, n_ctx: int, width: int, heads: int, qkv_bias: bool, norm_layer=nn.LayerNorm, qk_norm: bool = False, drop_path_rate: float = 0.0):
         super().__init__()
         self.n_ctx = n_ctx
         self.width = width
         self.heads = heads
         self.c_qkv = nn.Linear(width, width * 3, bias=qkv_bias)
         self.c_proj = nn.Linear(width, width)
-        self.attention = QKVMultiheadAttention(
-            heads=heads,
-            n_ctx=n_ctx,
-            width=width,
-            norm_layer=norm_layer,
-            qk_norm=qk_norm
-        )
+        self.attention = QKVMultiheadAttention(heads=heads, n_ctx=n_ctx, width=width, norm_layer=norm_layer, qk_norm=qk_norm)
         self.drop_path = DropPath(drop_path_rate) if drop_path_rate > 0. else nn.Identity()
 
     def forward(self, x):
@@ -365,25 +289,11 @@ class MultiheadAttention(nn.Module):
 
 class ResidualAttentionBlock(nn.Module):
     def __init__(
-        self,
-        *,
-        n_ctx: int,
-        width: int,
-        heads: int,
-        qkv_bias: bool = True,
-        norm_layer=nn.LayerNorm,
-        qk_norm: bool = False,
-        drop_path_rate: float = 0.0,
+        self, *, n_ctx: int, width: int, heads: int, qkv_bias: bool = True, norm_layer=nn.LayerNorm, qk_norm: bool = False, drop_path_rate: float = 0.0,
     ):
         super().__init__()
         self.attn = MultiheadAttention(
-            n_ctx=n_ctx,
-            width=width,
-            heads=heads,
-            qkv_bias=qkv_bias,
-            norm_layer=norm_layer,
-            qk_norm=qk_norm,
-            drop_path_rate=drop_path_rate
+            n_ctx=n_ctx, width=width, heads=heads, qkv_bias=qkv_bias, norm_layer=norm_layer, qk_norm=qk_norm, drop_path_rate=drop_path_rate,
         )
         self.ln_1 = norm_layer(width, elementwise_affine=True, eps=1e-6)
         self.mlp = MLP(width=width, drop_path_rate=drop_path_rate)
@@ -397,16 +307,7 @@ class ResidualAttentionBlock(nn.Module):
 
 class Transformer(nn.Module):
     def __init__(
-        self,
-        *,
-        n_ctx: int,
-        width: int,
-        layers: int,
-        heads: int,
-        qkv_bias: bool = True,
-        norm_layer=nn.LayerNorm,
-        qk_norm: bool = False,
-        drop_path_rate: float = 0.0
+        self, *, n_ctx: int, width: int, layers: int, heads: int, qkv_bias: bool = True, norm_layer=nn.LayerNorm, qk_norm: bool = False, drop_path_rate: float = 0.0,
     ):
         super().__init__()
         self.n_ctx = n_ctx
@@ -415,13 +316,7 @@ class Transformer(nn.Module):
         self.resblocks = nn.ModuleList(
             [
                 ResidualAttentionBlock(
-                    n_ctx=n_ctx,
-                    width=width,
-                    heads=heads,
-                    qkv_bias=qkv_bias,
-                    norm_layer=norm_layer,
-                    qk_norm=qk_norm,
-                    drop_path_rate=drop_path_rate
+                    n_ctx=n_ctx, width=width, heads=heads, qkv_bias=qkv_bias, norm_layer=norm_layer, qk_norm=qk_norm, drop_path_rate=drop_path_rate,
                 )
                 for _ in range(layers)
             ]
@@ -436,19 +331,8 @@ class Transformer(nn.Module):
 class CrossAttentionDecoder(nn.Module):
 
     def __init__(
-        self,
-        *,
-        num_latents: int,
-        out_channels: int,
-        fourier_embedder: FourierEmbedder,
-        width: int,
-        heads: int,
-        mlp_expand_ratio: int = 4,
-        downsample_ratio: int = 1,
-        enable_ln_post: bool = True,
-        qkv_bias: bool = True,
-        qk_norm: bool = False,
-        label_type: str = "binary"
+        self, *, num_latents: int, out_channels: int, fourier_embedder: FourierEmbedder, width: int, heads: int, mlp_expand_ratio: int = 4, downsample_ratio: int = 1,
+        enable_ln_post: bool = True, qkv_bias: bool = True, qk_norm: bool = False, label_type: str = "binary",
     ):
         super().__init__()
 
@@ -461,12 +345,7 @@ class CrossAttentionDecoder(nn.Module):
         if self.enable_ln_post == False:
             qk_norm = False
         self.cross_attn_decoder = ResidualCrossAttentionBlock(
-            n_data=num_latents,
-            width=width,
-            mlp_expand_ratio=mlp_expand_ratio,
-            heads=heads,
-            qkv_bias=qkv_bias,
-            qk_norm=qk_norm
+            n_data=num_latents, width=width, mlp_expand_ratio=mlp_expand_ratio, heads=heads, qkv_bias=qkv_bias, qk_norm=qk_norm,
         )
 
         if self.enable_ln_post:
@@ -495,12 +374,8 @@ class CrossAttentionDecoder(nn.Module):
 
 
 def fps(
-    src: torch.Tensor,
-    batch: Optional[Tensor] = None,
-    ratio: Optional[Union[Tensor, float]] = None,
-    random_start: bool = True,
-    batch_size: Optional[int] = None,
-    ptr: Optional[Union[Tensor, List[int]]] = None,
+    src: Tensor, batch: Tensor | None = None, ratio: Tensor | float | None = None, random_start: bool = True, batch_size: int | None = None,
+    ptr: Tensor | list[int] | None = None,
 ):
     src = src.float()
     from torch_cluster import fps as fps_fn
@@ -511,21 +386,8 @@ def fps(
 class PointCrossAttentionEncoder(nn.Module):
 
     def __init__(
-        self, *,
-        num_latents: int,
-        downsample_ratio: float,
-        pc_size: int,
-        pc_sharpedge_size: int,
-        fourier_embedder: FourierEmbedder,
-        point_feats: int,
-        width: int,
-        heads: int,
-        layers: int,
-        normal_pe: bool = False,
-        qkv_bias: bool = True,
-        use_ln_post: bool = False,
-        use_checkpoint: bool = False,
-        qk_norm: bool = False
+        self, *, num_latents: int, downsample_ratio: float, pc_size: int, pc_sharpedge_size: int, fourier_embedder: FourierEmbedder, point_feats: int, width: int,
+        heads: int, layers: int, normal_pe: bool = False, qkv_bias: bool = True, use_ln_post: bool = False, use_checkpoint: bool = False, qk_norm: bool = False,
     ):
 
         super().__init__()
@@ -537,11 +399,9 @@ class PointCrossAttentionEncoder(nn.Module):
         self.normal_pe = normal_pe
 
         if pc_sharpedge_size == 0:
-            print(
-                f'PointCrossAttentionEncoder INFO: pc_sharpedge_size is not given, using pc_size as pc_sharpedge_size')
+            print(f"PointCrossAttentionEncoder INFO: `pc_sharpedge_size` is not given, using `pc_size` as `pc_sharpedge_size`.")
         else:
-            print(
-                f'PointCrossAttentionEncoder INFO: pc_sharpedge_size is given, using pc_size={pc_size}, pc_sharpedge_size={pc_sharpedge_size}')
+            print(f"PointCrossAttentionEncoder INFO: `pc_sharpedge_size` is given, using `pc_size`={pc_size}, `pc_sharpedge_size`={pc_sharpedge_size}.")
 
         self.pc_size = pc_size
         self.pc_sharpedge_size = pc_sharpedge_size
@@ -549,30 +409,18 @@ class PointCrossAttentionEncoder(nn.Module):
         self.fourier_embedder = fourier_embedder
 
         self.input_proj = nn.Linear(self.fourier_embedder.out_dim + point_feats, width)
-        self.cross_attn = ResidualCrossAttentionBlock(
-            width=width,
-            heads=heads,
-            qkv_bias=qkv_bias,
-            qk_norm=qk_norm
-        )
+        self.cross_attn = ResidualCrossAttentionBlock(width=width, heads=heads, qkv_bias=qkv_bias, qk_norm=qk_norm)
 
         self.self_attn = None
         if layers > 0:
-            self.self_attn = Transformer(
-                n_ctx=num_latents,
-                width=width,
-                layers=layers,
-                heads=heads,
-                qkv_bias=qkv_bias,
-                qk_norm=qk_norm
-            )
+            self.self_attn = Transformer(n_ctx=num_latents, width=width, layers=layers, heads=heads, qkv_bias=qkv_bias, qk_norm=qk_norm)
 
         if use_ln_post:
             self.ln_post = nn.LayerNorm(width)
         else:
             self.ln_post = None
 
-    def sample_points_and_latents(self, pc: torch.FloatTensor, feats: Optional[torch.FloatTensor] = None):
+    def sample_points_and_latents(self, pc: torch.FloatTensor, feats: torch.FloatTensor | None = None):
         B, N, D = pc.shape
         num_pts = self.num_latents * self.downsample_ratio
 
@@ -586,8 +434,7 @@ class PointCrossAttentionEncoder(nn.Module):
         # Split random and sharpedge surface points
         random_pc, sharpedge_pc = torch.split(pc, [self.pc_size, self.pc_sharpedge_size], dim=1)
         assert random_pc.shape[1] <= self.pc_size, "Random surface points size must be less than or equal to pc_size"
-        assert sharpedge_pc.shape[
-                   1] <= self.pc_sharpedge_size, "Sharpedge surface points size must be less than or equal to pc_sharpedge_size"
+        assert sharpedge_pc.shape[1] <= self.pc_sharpedge_size, "Sharpedge surface points size must be less than or equal to pc_sharpedge_size"
 
         # Randomly select random surface points and random query points
         input_random_pc_size = int(num_random_query * self.downsample_ratio)
@@ -608,8 +455,7 @@ class PointCrossAttentionEncoder(nn.Module):
             query_sharpedge_pc = torch.zeros(B, 0, D, dtype=query_random_pc.dtype).to(pc.device)
         else:
             sharpedge_query_ratio = num_sharpedge_query / input_sharpedge_pc_size
-            idx_sharpedge_pc = torch.randperm(sharpedge_pc.shape[1], device=sharpedge_pc.device)[
-                               :input_sharpedge_pc_size]
+            idx_sharpedge_pc = torch.randperm(sharpedge_pc.shape[1], device=sharpedge_pc.device)[:input_sharpedge_pc_size]
             input_sharpedge_pc = sharpedge_pc[:, idx_sharpedge_pc, :]
             flatten_input_sharpedge_surface_points = input_sharpedge_pc.view(B * input_sharpedge_pc_size, D)
             N_down = int(flatten_input_sharpedge_surface_points.shape[0] / B)
@@ -629,26 +475,18 @@ class PointCrossAttentionEncoder(nn.Module):
         # Concat normal if given
         if self.point_feats != 0:
 
-            random_surface_feats, sharpedge_surface_feats = torch.split(feats, [self.pc_size, self.pc_sharpedge_size],
-                                                                        dim=1)
+            random_surface_feats, sharpedge_surface_feats = torch.split(feats, [self.pc_size, self.pc_sharpedge_size], dim=1)
             input_random_surface_feats = random_surface_feats[:, idx_random_pc, :]
             flatten_input_random_surface_feats = input_random_surface_feats.view(B * input_random_pc_size, -1)
-            query_random_feats = flatten_input_random_surface_feats[idx_query_random].view(B, -1,
-                                                                                           flatten_input_random_surface_feats.shape[
-                                                                                               -1])
+            query_random_feats = flatten_input_random_surface_feats[idx_query_random].view(B, -1, flatten_input_random_surface_feats.shape[-1])
 
             if input_sharpedge_pc_size == 0:
-                input_sharpedge_surface_feats = torch.zeros(B, 0, self.point_feats,
-                                                            dtype=input_random_surface_feats.dtype).to(pc.device)
-                query_sharpedge_feats = torch.zeros(B, 0, self.point_feats, dtype=query_random_feats.dtype).to(
-                    pc.device)
+                input_sharpedge_surface_feats = torch.zeros(B, 0, self.point_feats, dtype=input_random_surface_feats.dtype).to(pc.device)
+                query_sharpedge_feats = torch.zeros(B, 0, self.point_feats, dtype=query_random_feats.dtype).to(pc.device)
             else:
                 input_sharpedge_surface_feats = sharpedge_surface_feats[:, idx_sharpedge_pc, :]
-                flatten_input_sharpedge_surface_feats = input_sharpedge_surface_feats.view(B * input_sharpedge_pc_size,
-                                                                                           -1)
-                query_sharpedge_feats = flatten_input_sharpedge_surface_feats[idx_query_sharpedge].view(B, -1,
-                                                                                                        flatten_input_sharpedge_surface_feats.shape[
-                                                                                                            -1])
+                flatten_input_sharpedge_surface_feats = input_sharpedge_surface_feats.view(B * input_sharpedge_pc_size, -1)
+                query_sharpedge_feats = flatten_input_sharpedge_surface_feats[idx_query_sharpedge].view(B, -1, flatten_input_sharpedge_surface_feats.shape[-1])
 
             query_feats = torch.cat([query_random_feats, query_sharpedge_feats], dim=1)
             input_feats = torch.cat([input_random_surface_feats, input_sharpedge_surface_feats], dim=1)
@@ -666,20 +504,24 @@ class PointCrossAttentionEncoder(nn.Module):
             query_sharpedge_pc = torch.zeros(B, 1, D).to(pc.device)
             input_sharpedge_pc = torch.zeros(B, 1, D).to(pc.device)
 
-        return query.view(B, -1, query.shape[-1]), data.view(B, -1, data.shape[-1]), [query_pc, input_pc,
-                                                                                      query_random_pc, input_random_pc,
-                                                                                      query_sharpedge_pc,
-                                                                                      input_sharpedge_pc]
+        return (
+            query.view(B, -1, query.shape[-1]), data.view(B, -1, data.shape[-1]),
+            [query_pc, input_pc, query_random_pc, input_random_pc, query_sharpedge_pc, input_sharpedge_pc],
+        )
 
-    def forward(self, pc, feats):
+    def forward(self, pc: torch.FloatTensor, feats: torch.FloatTensor | None = None):
         """
+        Parameters
+        ----------
+        pc : torch.FloatTensor
+            Shape: [B, N, 3].
+        feats : torch.FloatTensor | None, optional, default=None
+            Shape: [B, N, C].
 
-        Args:
-            pc (torch.FloatTensor): [B, N, 3]
-            feats (torch.FloatTensor or None): [B, N, C]
-
-        Returns:
-
+        Returns
+        -------
+        latents : Any
+        pc_infos : list[Tensor]
         """
 
         query, data, pc_infos = self.sample_points_and_latents(pc, feats)

@@ -34,15 +34,22 @@ class ImageProcessorV2:
 
     @staticmethod
     def recenter(image, border_ratio: float = 0.2):
-        """ recenter an image to leave some empty space at the image border.
+        """
+        Recenter an image to leave some empty space at the image border.
 
-        Args:
-            image (ndarray): input image, float/uint8 [H, W, 3/4]
-            mask (ndarray): alpha mask, bool [H, W]
-            border_ratio (float, optional): border ratio, image will be resized to (1 - border_ratio). Defaults to 0.2.
+        Parameters
+        ----------
+        image : np.ndarray[float | uint8]
+            Input image. SHape: [H, W, 3/4].
+        mask : np.ndarray[bool]
+            Alpha mask. Shape: [H, W].
+        border_ratio : float, optional, default=0.2
+            Border ratio, image will be resized to [1 - border_ratio].
 
-        Returns:
-            ndarray: output image, float/uint8 [H, W, 3/4]
+        Returns
+        -------
+        outputs : np.ndarray[float | uint8]
+            Output image. Shape: [H, W, 3/4].
         """
 
         if image.shape[-1] == 4:
@@ -63,7 +70,7 @@ class ImageProcessorV2:
         h = x_max - x_min
         w = y_max - y_min
         if h == 0 or w == 0:
-            raise ValueError('input image is empty')
+            raise ValueError("Input image is empty.")
         desired_size = int(size * (1 - border_ratio))
         scale = desired_size / max(h, w)
         h2 = int(h * scale)
@@ -74,8 +81,7 @@ class ImageProcessorV2:
         y2_min = (size - w2) // 2
         y2_max = y2_min + w2
 
-        result[x2_min:x2_max, y2_min:y2_max] = cv2.resize(image[x_min:x_max, y_min:y_max], (w2, h2),
-                                                          interpolation=cv2.INTER_AREA)
+        result[x2_min:x2_max, y2_min:y2_max] = cv2.resize(image[x_min:x_max, y_min:y_max], (w2, h2), interpolation=cv2.INTER_AREA)
 
         bg = np.ones((result.shape[0], result.shape[1], 3), dtype=np.uint8) * 255
 
@@ -110,27 +116,18 @@ class ImageProcessorV2:
         if self.border_ratio is not None:
             border_ratio = self.border_ratio
         image, mask = self.load_image(image, border_ratio=border_ratio, to_tensor=to_tensor)
-        outputs = {
-            'image': image,
-            'mask': mask
-        }
+        outputs = {'image': image, 'mask': mask}
         return outputs
 
 
 class MVImageProcessorV2(ImageProcessorV2):
-    """
-    view order: front, front clockwise 90, back, front clockwise 270
-    """
+    """View order: front, front clockwise 90, back, front clockwise 270."""
+
     return_view_idx = True
 
     def __init__(self, size=512, border_ratio=None):
         super().__init__(size, border_ratio)
-        self.view2idx = {
-            'front': 0,
-            'left': 1,
-            'back': 2,
-            'right': 3
-        }
+        self.view2idx = {'front': 0, 'left': 1, 'back': 2, 'right': 3}
 
     def __call__(self, image_dict, border_ratio=0.15, to_tensor=True, **kwargs):
         if self.border_ratio is not None:
@@ -151,17 +148,10 @@ class MVImageProcessorV2(ImageProcessorV2):
 
         image = torch.cat(images, 0).unsqueeze(0)
         mask = torch.cat(masks, 0).unsqueeze(0)
-        outputs = {
-            'image': image,
-            'mask': mask,
-            'view_idxs': view_idxs
-        }
+        outputs = {'image': image, 'mask': mask, 'view_idxs': view_idxs}
         return outputs
 
 
-IMAGE_PROCESSORS = {
-    "v2": ImageProcessorV2,
-    'mv_v2': MVImageProcessorV2,
-}
+IMAGE_PROCESSORS = {'v2': ImageProcessorV2, 'mv_v2': MVImageProcessorV2}
 
 DEFAULT_IMAGEPROCESSOR = 'v2'

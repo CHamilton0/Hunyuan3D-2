@@ -7,10 +7,7 @@ from diffusers.models.attention import FeedForward
 
 
 class AddAuxiliaryLoss(torch.autograd.Function):
-    """
-    The trick function of adding auxiliary (aux) loss,
-    which includes the gradient of the aux loss during backpropagation.
-    """
+    """The trick function of adding auxiliary (aux) loss, which includes the gradient of the aux loss during backpropagation."""
 
     @staticmethod
     def forward(ctx, x, loss):
@@ -56,7 +53,7 @@ class MoEGate(nn.Module):
         if self.scoring_func == 'softmax':
             scores = logits.softmax(dim=-1)
         else:
-            raise NotImplementedError(f'insupportable scoring function for MoE gating: {self.scoring_func}')
+            raise NotImplementedError(f"Unsupportable scoring function for MoE gating: {self.scoring_func}")
 
         ### select top-k experts
         topk_weight, topk_idx = torch.topk(scores, k=self.top_k, dim=-1, sorted=False)
@@ -75,9 +72,9 @@ class MoEGate(nn.Module):
             if self.seq_aux:
                 scores_for_seq_aux = scores_for_aux.view(bsz, seq_len, -1)
                 ce = torch.zeros(bsz, self.n_routed_experts, device=hidden_states.device)
-                ce.scatter_add_(1, topk_idx_for_aux_loss,
-                                torch.ones(bsz, seq_len * aux_topk, device=hidden_states.device)).div_(
-                    seq_len * aux_topk / self.n_routed_experts)
+                ce.scatter_add_(
+                    1, topk_idx_for_aux_loss, torch.ones(bsz, seq_len * aux_topk, device=hidden_states.device),
+                ).div_(seq_len * aux_topk / self.n_routed_experts)
                 aux_loss = (ce * scores_for_seq_aux.mean(dim=1)).sum(dim=1).mean() * self.alpha
             else:
                 mask_ce = F.one_hot(topk_idx_for_aux_loss.view(-1), num_classes=self.n_routed_experts)
@@ -91,20 +88,18 @@ class MoEGate(nn.Module):
 
 
 class MoEBlock(nn.Module):
-    def __init__(self, dim, num_experts=8, moe_top_k=2,
-                 activation_fn="gelu", dropout=0.0, final_dropout=False,
-                 ff_inner_dim=None, ff_bias=True):
+    def __init__(self, dim, num_experts=8, moe_top_k=2, activation_fn="gelu", dropout=0.0, final_dropout=False, ff_inner_dim=None, ff_bias=True):
         super().__init__()
         self.moe_top_k = moe_top_k
-        self.experts = nn.ModuleList([
-            FeedForward(dim, dropout=dropout, activation_fn=activation_fn, final_dropout=final_dropout,
-                        inner_dim=ff_inner_dim, bias=ff_bias)
-            for i in range(num_experts)])
+        self.experts = nn.ModuleList(
+            [
+                FeedForward(dim, dropout=dropout, activation_fn=activation_fn, final_dropout=final_dropout, inner_dim=ff_inner_dim, bias=ff_bias)
+                for i in range(num_experts)
+            ]
+        )
         self.gate = MoEGate(embed_dim=dim, num_experts=num_experts, num_experts_per_tok=moe_top_k)
 
-        self.shared_experts = FeedForward(dim, dropout=dropout, activation_fn=activation_fn,
-                                          final_dropout=final_dropout, inner_dim=ff_inner_dim,
-                                          bias=ff_bias)
+        self.shared_experts = FeedForward(dim, dropout=dropout, activation_fn=activation_fn, final_dropout=final_dropout, inner_dim=ff_inner_dim, bias=ff_bias)
 
     def initialize_weight(self):
         pass

@@ -62,5 +62,7 @@ def LoadObjWithTexture(fn, tex_fn):
                 face_textures.append([ft[0], ft[i - 1], ft[i]])
 
     tex_image = cv2.cvtColor(cv2.imread(tex_fn), cv2.COLOR_BGR2RGB)
-    return np.array(vertices).astype('float32'), np.array(vertex_textures).astype('float32'), np.array(faces).astype(
-        'int32'), np.array(face_textures).astype('int32'), tex_image
+    return (
+        np.array(vertices).astype('float32'), np.array(vertex_textures).astype('float32'),
+        np.array(faces).astype('int32'), np.array(face_textures).astype('int32'), tex_image,
+    )

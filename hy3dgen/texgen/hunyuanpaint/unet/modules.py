@@ -15,7 +15,7 @@
 import copy
 import json
 import os
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import torch
 import torch.nn as nn
@@ -30,21 +30,17 @@ def _chunked_feed_forward(ff: nn.Module, hidden_states: torch.Tensor, chunk_dim:
     # "feed_forward_chunk_size" can be used to save memory
     if hidden_states.shape[chunk_dim] % chunk_size != 0:
         raise ValueError(
-            f"`hidden_states` dimension to be chunked: {hidden_states.shape[chunk_dim]}"
-            f"has to be divisible by chunk size: {chunk_size}."
-            f" Make sure to set an appropriate `chunk_size` when calling `unet.enable_forward_chunking`."
+            f"`hidden_states` dimension to be chunked: {hidden_states.shape[chunk_dim]} has to be divisible by chunk size: {chunk_size}. "
+            "Make sure to set an appropriate `chunk_size` when calling `unet.enable_forward_chunking`."
         )
 
     num_chunks = hidden_states.shape[chunk_dim] // chunk_size
-    ff_output = torch.cat(
-        [ff(hid_slice) for hid_slice in hidden_states.chunk(num_chunks, dim=chunk_dim)],
-        dim=chunk_dim,
-    )
+    ff_output = torch.cat([ff(hid_slice) for hid_slice in hidden_states.chunk(num_chunks, dim=chunk_dim)], dim=chunk_dim)
     return ff_output
 
 
-class Basic2p5DTransformerBlock(torch.nn.Module):
-    def __init__(self, transformer: BasicTransformerBlock,layer_name,use_ma=True,use_ra=True,is_turbo=False) -> None:
+class Basic2p5DTransformerBlock(nn.Module):
+    def __init__(self, transformer: BasicTransformerBlock, layer_name, use_ma=True, use_ra=True, is_turbo=False) -> None:
         super().__init__()
         self.transformer = transformer
         self.layer_name = layer_name
@@ -55,27 +51,15 @@ class Basic2p5DTransformerBlock(torch.nn.Module):
         # multiview attn
         if self.use_ma:
             self.attn_multiview = Attention(
-                query_dim=self.dim,
-                heads=self.num_attention_heads,
-                dim_head=self.attention_head_dim,
-                dropout=self.dropout,
-                bias=self.attention_bias,
-                cross_attention_dim=None,
-                upcast_attention=self.attn1.upcast_attention,
-                out_bias=True,
+                query_dim=self.dim, heads=self.num_attention_heads, dim_head=self.attention_head_dim, dropout=self.dropout, bias=self.attention_bias,
+                cross_attention_dim=None, upcast_attention=self.attn1.upcast_attention, out_bias=True,
             )
 
         # ref attn
         if self.use_ra:
             self.attn_refview = Attention(
-                query_dim=self.dim,
-                heads=self.num_attention_heads,
-                dim_head=self.attention_head_dim,
-                dropout=self.dropout,
-                bias=self.attention_bias,
-                cross_attention_dim=None,
-                upcast_attention=self.attn1.upcast_attention,
-                out_bias=True,
+                query_dim=self.dim, heads=self.num_attention_heads, dim_head=self.attention_head_dim, dropout=self.dropout, bias=self.attention_bias,
+                cross_attention_dim=None, upcast_attention=self.attn1.upcast_attention, out_bias=True,
             )
         if self.is_turbo:
             self._initialize_attn_weights()
@@ -102,15 +86,9 @@ class Basic2p5DTransformerBlock(torch.nn.Module):
             return getattr(self.transformer, name)
 
     def forward(
-        self,
-        hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        encoder_hidden_states: Optional[torch.Tensor] = None,
-        encoder_attention_mask: Optional[torch.Tensor] = None,
-        timestep: Optional[torch.LongTensor] = None,
-        cross_attention_kwargs: Dict[str, Any] = None,
-        class_labels: Optional[torch.LongTensor] = None,
-        added_cond_kwargs: Optional[Dict[str, torch.Tensor]] = None,
+        self, hidden_states: torch.Tensor, attention_mask: torch.Tensor | None = None, encoder_hidden_states: torch.Tensor | None = None,
+        encoder_attention_mask: torch.Tensor | None = None, timestep: torch.LongTensor | None = None, cross_attention_kwargs: dict[str, Any] = None,
+        class_labels: torch.LongTensor | None = None, added_cond_kwargs: dict[str, torch.Tensor] | None = None,
     ) -> torch.Tensor:
 
         # Notice that normalization is always applied before the real computation in the following blocks.
@@ -128,14 +106,14 @@ class Basic2p5DTransformerBlock(torch.nn.Module):
             position_voxel_indices = cross_attention_kwargs.pop("position_voxel_indices", None)
             mva_scale = 1.0
             ref_scale = 1.0
-            
+
         condition_embed_dict = cross_attention_kwargs.pop("condition_embed_dict", None)
 
         if self.norm_type == "ada_norm":
             norm_hidden_states = self.norm1(hidden_states, timestep)
         elif self.norm_type == "ada_norm_zero":
             norm_hidden_states, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.norm1(
-                hidden_states, timestep, class_labels, hidden_dtype=hidden_states.dtype
+                hidden_states, timestep, class_labels, hidden_dtype=hidden_states.dtype,
             )
         elif self.norm_type in ["layer_norm", "layer_norm_i2vgen"]:
             norm_hidden_states = self.norm1(hidden_states)
@@ -148,7 +126,7 @@ class Basic2p5DTransformerBlock(torch.nn.Module):
             norm_hidden_states = self.norm1(hidden_states)
             norm_hidden_states = norm_hidden_states * (1 + scale_msa) + shift_msa
         else:
-            raise ValueError("Incorrect norm used")
+            raise ValueError("Incorrect norm used.")
 
         if self.pos_embed is not None:
             norm_hidden_states = self.pos_embed(norm_hidden_states)
@@ -158,9 +136,7 @@ class Basic2p5DTransformerBlock(torch.nn.Module):
         gligen_kwargs = cross_attention_kwargs.pop("gligen", None)
 
         attn_output = self.attn1(
-            norm_hidden_states,
-            encoder_hidden_states=encoder_hidden_states if self.only_cross_attention else None,
-            attention_mask=attention_mask,
+            norm_hidden_states, encoder_hidden_states=encoder_hidden_states if self.only_cross_attention else None, attention_mask=attention_mask,
             **cross_attention_kwargs,
         )
 
@@ -175,29 +151,20 @@ class Basic2p5DTransformerBlock(torch.nn.Module):
 
         # 1.2 Reference Attention
         if 'w' in mode:
-            condition_embed_dict[self.layer_name] = rearrange(
-                norm_hidden_states, '(b n) l c -> b (n l) c',
-                n=num_in_batch
-            )  # B, (N L), C
+            condition_embed_dict[self.layer_name] = rearrange(norm_hidden_states, '(b n) l c -> b (n l) c', n=num_in_batch)  # B, (N L), C
 
         if 'r' in mode and self.use_ra:
-            condition_embed = condition_embed_dict[self.layer_name].unsqueeze(1).repeat(1, num_in_batch, 1,
-                                                                                        1)  # B N L C
+            condition_embed = condition_embed_dict[self.layer_name].unsqueeze(1).repeat(1, num_in_batch, 1, 1)  # B N L C
             condition_embed = rearrange(condition_embed, 'b n l c -> (b n) l c')
 
-            attn_output = self.attn_refview(
-                norm_hidden_states,
-                encoder_hidden_states=condition_embed,
-                attention_mask=None,
-                **cross_attention_kwargs
-            )
+            attn_output = self.attn_refview(norm_hidden_states, encoder_hidden_states=condition_embed, attention_mask=None, **cross_attention_kwargs)
             if not self.is_turbo:
                 ref_scale_timing = ref_scale
                 if isinstance(ref_scale, torch.Tensor):
                     ref_scale_timing = ref_scale.unsqueeze(1).repeat(1, num_in_batch).view(-1)
                     for _ in range(attn_output.ndim - 1):
                         ref_scale_timing = ref_scale_timing.unsqueeze(-1)
-                        
+
             hidden_states = ref_scale_timing * attn_output + hidden_states
 
             if hidden_states.ndim == 4:
@@ -217,21 +184,14 @@ class Basic2p5DTransformerBlock(torch.nn.Module):
                     if multivew_hidden_states.shape[1] in position_voxel_indices:
                         position_indices = position_voxel_indices[multivew_hidden_states.shape[1]]
                 attn_output = self.attn_multiview(
-                    multivew_hidden_states,
-                    encoder_hidden_states=multivew_hidden_states,
-                    attention_mask=position_mask,
-                    position_indices=position_indices,
-                    **cross_attention_kwargs
+                    multivew_hidden_states, encoder_hidden_states=multivew_hidden_states, attention_mask=position_mask, position_indices=position_indices,
+                    **cross_attention_kwargs,
                 )
             else:
-                attn_output = self.attn_multiview(
-                    multivew_hidden_states,
-                    encoder_hidden_states=multivew_hidden_states,
-                    **cross_attention_kwargs
-                )
+                attn_output = self.attn_multiview(multivew_hidden_states, encoder_hidden_states=multivew_hidden_states, **cross_attention_kwargs)
 
             attn_output = rearrange(attn_output, 'b (n l) c -> (b n) l c', n=num_in_batch)
-            
+
             hidden_states = mva_scale * attn_output + hidden_states
             if hidden_states.ndim == 4:
                 hidden_states = hidden_states.squeeze(1)
@@ -253,16 +213,13 @@ class Basic2p5DTransformerBlock(torch.nn.Module):
             elif self.norm_type == "ada_norm_continuous":
                 norm_hidden_states = self.norm2(hidden_states, added_cond_kwargs["pooled_text_emb"])
             else:
-                raise ValueError("Incorrect norm")
+                raise ValueError("Incorrect norm.")
 
             if self.pos_embed is not None and self.norm_type != "ada_norm_single":
                 norm_hidden_states = self.pos_embed(norm_hidden_states)
 
             attn_output = self.attn2(
-                norm_hidden_states,
-                encoder_hidden_states=encoder_hidden_states,
-                attention_mask=encoder_attention_mask,
-                **cross_attention_kwargs,
+                norm_hidden_states, encoder_hidden_states=encoder_hidden_states, attention_mask=encoder_attention_mask, **cross_attention_kwargs,
             )
 
             hidden_states = attn_output + hidden_states
@@ -301,33 +258,29 @@ class Basic2p5DTransformerBlock(torch.nn.Module):
 @torch.no_grad()
 def compute_voxel_grid_mask(position, grid_resolution=8):
 
-    position = position.half()    
-    B,N,_,H,W = position.shape
-    assert H%grid_resolution==0 and W%grid_resolution==0
+    position = position.half()
+    B, N, _, H, W = position.shape
+    assert H % grid_resolution == 0 and W % grid_resolution == 0
 
     valid_mask = (position != 1).all(dim=2, keepdim=True)
     valid_mask = valid_mask.expand_as(position)
-    position[valid_mask==False] = 0
+    position[valid_mask == False] = 0
 
-    
+
     position = rearrange(
-        position,
-        'b n c (num_h grid_h) (num_w grid_w) -> b n num_h num_w c grid_h grid_w', 
-        num_h=grid_resolution, num_w=grid_resolution
+        position, 'b n c (num_h grid_h) (num_w grid_w) -> b n num_h num_w c grid_h grid_w', num_h=grid_resolution, num_w=grid_resolution,
     )
     valid_mask = rearrange(
-        valid_mask, 
-        'b n c (num_h grid_h) (num_w grid_w) -> b n num_h num_w c grid_h grid_w', 
-        num_h=grid_resolution, num_w=grid_resolution
+        valid_mask, 'b n c (num_h grid_h) (num_w grid_w) -> b n num_h num_w c grid_h grid_w', num_h=grid_resolution, num_w=grid_resolution,
     )
 
     grid_position = position.sum(dim=(-2, -1))
     count_masked = valid_mask.sum(dim=(-2, -1))
 
     grid_position = grid_position / count_masked.clamp(min=1)
-    grid_position[count_masked<5] = 0
+    grid_position[count_masked < 5] = 0
 
-    grid_position = grid_position.permute(0,1,4,2,3)
+    grid_position = grid_position.permute(0, 1, 4, 2, 3)
     grid_position = rearrange(grid_position, 'b n c h w -> b n (h w) c')
 
     grid_position_expanded_1 = grid_position.unsqueeze(2).unsqueeze(4)  # 形状变为 B, N, 1, L, 1, 3
@@ -337,15 +290,15 @@ def compute_voxel_grid_mask(position, grid_resolution=8):
     distances = torch.norm(grid_position_expanded_1 - grid_position_expanded_2, dim=-1)  # 形状为 B, N, N, L, L
 
     weights = distances
-    grid_distance = 1.73/grid_resolution
-    
-    #weights = weights*-32
+    grid_distance = 1.73 / grid_resolution
+
+    #weights = weights * -32
     #weights = weights.clamp(min=-10000.0)
-    
+
     weights = weights< grid_distance
 
     return weights
-    
+
 def compute_multi_resolution_mask(position_maps, grid_resolutions=[32, 16, 8]):
     position_attn_mask = {}
     with torch.no_grad():
@@ -358,50 +311,42 @@ def compute_multi_resolution_mask(position_maps, grid_resolutions=[32, 16, 8]):
 @torch.no_grad()
 def compute_discrete_voxel_indice(position, grid_resolution=8, voxel_resolution=128):
 
-    position = position.half()    
-    B,N,_,H,W = position.shape
-    assert H%grid_resolution==0 and W%grid_resolution==0
+    position = position.half()
+    B, N, _, H, W = position.shape
+    assert (H % grid_resolution == 0) and (W % grid_resolution == 0)
 
     valid_mask = (position != 1).all(dim=2, keepdim=True)
     valid_mask = valid_mask.expand_as(position)
-    position[valid_mask==False] = 0
-    
+    position[valid_mask == False] = 0
+
     position = rearrange(
-        position, 
-        'b n c (num_h grid_h) (num_w grid_w) -> b n num_h num_w c grid_h grid_w', 
-        num_h=grid_resolution, num_w=grid_resolution
+        position, 'b n c (num_h grid_h) (num_w grid_w) -> b n num_h num_w c grid_h grid_w', num_h=grid_resolution, num_w=grid_resolution,
     )
     valid_mask = rearrange(
-        valid_mask, 
-        'b n c (num_h grid_h) (num_w grid_w) -> b n num_h num_w c grid_h grid_w', 
-        num_h=grid_resolution, num_w=grid_resolution
+        valid_mask, 'b n c (num_h grid_h) (num_w grid_w) -> b n num_h num_w c grid_h grid_w', num_h=grid_resolution, num_w=grid_resolution,
     )
 
     grid_position = position.sum(dim=(-2, -1))
     count_masked = valid_mask.sum(dim=(-2, -1))
 
     grid_position = grid_position / count_masked.clamp(min=1)
-    grid_position[count_masked<5] = 0
+    grid_position[count_masked < 5] = 0
 
-    grid_position = grid_position.permute(0,1,4,2,3).clamp(0, 1) # B N C H W
+    grid_position = grid_position.permute(0, 1, 4, 2, 3).clamp(0, 1) # B N C H W
     voxel_indices = grid_position * (voxel_resolution - 1)
     voxel_indices = torch.round(voxel_indices).long()
     return voxel_indices
-    
-def compute_multi_resolution_discrete_voxel_indice(
-    position_maps, 
-    grid_resolutions=[64, 32, 16, 8], 
-    voxel_resolutions=[512, 256, 128, 64]
-):
+
+def compute_multi_resolution_discrete_voxel_indice(position_maps, grid_resolutions=[64, 32, 16, 8], voxel_resolutions=[512, 256, 128, 64]):
     voxel_indices = {}
     with torch.no_grad():
         for grid_resolution, voxel_resolution in zip(grid_resolutions, voxel_resolutions):
             voxel_indice = compute_discrete_voxel_indice(position_maps, grid_resolution, voxel_resolution)
             voxel_indice = rearrange(voxel_indice, 'b n c h w -> b (n h w) c')
-            voxel_indices[voxel_indice.shape[1]] = {'voxel_indices':voxel_indice, 'voxel_resolution':voxel_resolution}
+            voxel_indices[voxel_indice.shape[1]] = {'voxel_indices': voxel_indice, 'voxel_resolution': voxel_resolution}
     return voxel_indices
 
-class UNet2p5DConditionModel(torch.nn.Module):
+class UNet2p5DConditionModel(nn.Module):
     def __init__(self, unet: UNet2DConditionModel) -> None:
         super().__init__()
         self.unet = unet
@@ -434,7 +379,7 @@ class UNet2p5DConditionModel(torch.nn.Module):
         return unet
 
     def init_condition(self):
-        self.unet.conv_in = torch.nn.Conv2d(
+        self.unet.conv_in = nn.Conv2d(
             12,
             self.unet.conv_in.out_channels,
             kernel_size=self.unet.conv_in.kernel_size,
@@ -442,7 +387,8 @@ class UNet2p5DConditionModel(torch.nn.Module):
             padding=self.unet.conv_in.padding,
             dilation=self.unet.conv_in.dilation,
             groups=self.unet.conv_in.groups,
-            bias=self.unet.conv_in.bias is not None)
+            bias=self.unet.conv_in.bias is not None,
+        )
 
         self.unet.learned_text_clip_gen = nn.Parameter(torch.randn(1, 77, 1024))
         self.unet.learned_text_clip_ref = nn.Parameter(torch.randn(1, 77, 1024))
@@ -463,9 +409,7 @@ class UNet2p5DConditionModel(torch.nn.Module):
                     for transformer_i, transformer in enumerate(attn.transformer_blocks):
                         if isinstance(transformer, BasicTransformerBlock):
                             attn.transformer_blocks[transformer_i] = Basic2p5DTransformerBlock(
-                                transformer,
-                                f'down_{down_block_i}_{attn_i}_{transformer_i}',
-                                use_ma, use_ra, is_turbo
+                                transformer, f'down_{down_block_i}_{attn_i}_{transformer_i}', use_ma, use_ra, is_turbo,
                             )
 
         if hasattr(unet.mid_block, "has_cross_attention") and unet.mid_block.has_cross_attention:
@@ -473,9 +417,7 @@ class UNet2p5DConditionModel(torch.nn.Module):
                 for transformer_i, transformer in enumerate(attn.transformer_blocks):
                     if isinstance(transformer, BasicTransformerBlock):
                         attn.transformer_blocks[transformer_i] = Basic2p5DTransformerBlock(
-                            transformer,
-                            f'mid_{attn_i}_{transformer_i}',
-                            use_ma, use_ra, is_turbo
+                            transformer, f'mid_{attn_i}_{transformer_i}', use_ma, use_ra, is_turbo,
                         )
 
         for up_block_i, up_block in enumerate(unet.up_blocks):
@@ -484,9 +426,7 @@ class UNet2p5DConditionModel(torch.nn.Module):
                     for transformer_i, transformer in enumerate(attn.transformer_blocks):
                         if isinstance(transformer, BasicTransformerBlock):
                             attn.transformer_blocks[transformer_i] = Basic2p5DTransformerBlock(
-                                transformer,
-                                f'up_{up_block_i}_{attn_i}_{transformer_i}',
-                                use_ma, use_ra, is_turbo
+                                transformer, f'up_{up_block_i}_{attn_i}_{transformer_i}', use_ma, use_ra, is_turbo,
                             )
 
     def __getattr__(self, name: str):
@@ -496,9 +436,7 @@ class UNet2p5DConditionModel(torch.nn.Module):
             return getattr(self.unet, name)
 
     def forward(
-        self, sample, timestep, encoder_hidden_states,
-        *args, down_intrablock_additional_residuals=None,
-        down_block_res_samples=None, mid_block_res_sample=None,
+        self, sample, timestep, encoder_hidden_states, *args, down_intrablock_additional_residuals=None, down_block_res_samples=None, mid_block_res_sample=None,
         **cached_condition,
     ):
         B, N_gen, _, H, W = sample.shape
@@ -548,14 +486,8 @@ class UNet2p5DConditionModel(torch.nn.Module):
                 else:
                     unet_ref = self.unet
                 unet_ref(
-                    noisy_ref_latents, timestep_ref,
-                    encoder_hidden_states=encoder_hidden_states_ref,
-                    class_labels=camera_info_ref,
-                    # **kwargs
-                    return_dict=False,
-                    cross_attention_kwargs={
-                        'mode': 'w', 'num_in_batch': N_ref,
-                        'condition_embed_dict': condition_embed_dict},
+                    noisy_ref_latents, timestep_ref, encoder_hidden_states=encoder_hidden_states_ref, class_labels=camera_info_ref, return_dict=False, # **kwargs,
+                    cross_attention_kwargs={'mode': 'w', 'num_in_batch': N_ref, 'condition_embed_dict': condition_embed_dict},
                 )
                 cached_condition['condition_embed_dict'] = condition_embed_dict
         else:
@@ -566,24 +498,24 @@ class UNet2p5DConditionModel(torch.nn.Module):
 
         if self.is_turbo:
             cross_attention_kwargs_ = {
-                'mode': 'r', 'num_in_batch': N_gen,
+                'mode': 'r',
+                'num_in_batch': N_gen,
                 'condition_embed_dict': condition_embed_dict,
-                'position_attn_mask':position_attn_mask, 
-                'position_voxel_indices':position_voxel_indices,
+                'position_attn_mask': position_attn_mask, 
+                'position_voxel_indices': position_voxel_indices,
                 'mva_scale': mva_scale,
                 'ref_scale': ref_scale,
             }
         else:
             cross_attention_kwargs_ = {
-                'mode': 'r', 'num_in_batch': N_gen,
+                'mode': 'r',
+                'num_in_batch': N_gen,
                 'condition_embed_dict': condition_embed_dict,
                 'mva_scale': mva_scale,
                 'ref_scale': ref_scale,
             }
         return self.unet(
-            sample, timestep,
-            encoder_hidden_states_gen, *args,
-            class_labels=camera_info_gen,
+            sample, timestep, encoder_hidden_states_gen, *args, class_labels=camera_info_gen,
             down_intrablock_additional_residuals=[
                 sample.to(dtype=self.unet.dtype) for sample in down_intrablock_additional_residuals
             ] if down_intrablock_additional_residuals is not None else None,
@@ -591,9 +523,7 @@ class UNet2p5DConditionModel(torch.nn.Module):
                 sample.to(dtype=self.unet.dtype) for sample in down_block_res_samples
             ] if down_block_res_samples is not None else None,
             mid_block_additional_residual=(
-                mid_block_res_sample.to(dtype=self.unet.dtype)
-                if mid_block_res_sample is not None else None
+                mid_block_res_sample.to(dtype=self.unet.dtype) if mid_block_res_sample is not None else None
             ),
-            return_dict=False,
-            cross_attention_kwargs=cross_attention_kwargs_,
+            return_dict=False, cross_attention_kwargs=cross_attention_kwargs_,
         )

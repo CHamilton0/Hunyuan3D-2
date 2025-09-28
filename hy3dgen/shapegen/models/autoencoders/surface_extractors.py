@@ -12,8 +12,6 @@
 # fine-tuning enabling code and other elements of the foregoing made publicly available
 # by Tencent in accordance with TENCENT HUNYUAN COMMUNITY LICENSE AGREEMENT.
 
-from typing import Union, Tuple, List
-
 import numpy as np
 import torch
 from skimage import measure
@@ -35,7 +33,7 @@ def center_vertices(vertices):
 
 
 class SurfaceExtractor:
-    def _compute_box_stat(self, bounds: Union[Tuple[float], List[float], float], octree_resolution: int):
+    def _compute_box_stat(self, bounds: tuple[float] | list[float] | float, octree_resolution: int):
         if isinstance(bounds, float):
             bounds = [-bounds, -bounds, -bounds, bounds, bounds, bounds]
 
@@ -67,9 +65,7 @@ class SurfaceExtractor:
 class MCSurfaceExtractor(SurfaceExtractor):
     def run(self, grid_logit, *, mc_level, bounds, octree_resolution, **kwargs):
         vertices, faces, normals, _ = measure.marching_cubes(
-            grid_logit.cpu().numpy(),
-            mc_level,
-            method="lewiner"
+            grid_logit.cpu().numpy(), mc_level, method="lewiner",
         )
         grid_size, bbox_min, bbox_size = self._compute_box_stat(bounds, octree_resolution)
         vertices = vertices / grid_size * bbox_size + bbox_min
@@ -94,7 +90,4 @@ class DMCSurfaceExtractor(SurfaceExtractor):
         return vertices, faces
 
 
-SurfaceExtractors = {
-    'mc': MCSurfaceExtractor,
-    'dmc': DMCSurfaceExtractor,
-}
+SurfaceExtractors = {'mc': MCSurfaceExtractor, 'dmc': DMCSurfaceExtractor}

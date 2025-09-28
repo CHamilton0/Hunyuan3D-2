@@ -26,27 +26,31 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torchvision import transforms
-from transformers import (
-    CLIPVisionModelWithProjection,
-    CLIPVisionConfig,
-    Dinov2Model,
-    Dinov2Config,
-)
+from transformers import CLIPVisionModelWithProjection, CLIPVisionConfig, Dinov2Model, Dinov2Config
 
 
-def get_1d_sincos_pos_embed_from_grid(embed_dim, pos):
+def get_1d_sincos_pos_embed_from_grid(embed_dim: int, pos: np.ndarray):
     """
-    embed_dim: output dimension for each position
-    pos: a list of positions to be encoded: size (M,)
-    out: (M, D)
+    Parameters
+    ----------
+    embed_dim : _type_
+        Output dimension for each position.
+    pos : list | np.ndarray
+        A list of positions to be encoded. Shape: [M,].
+
+    Returns
+    -------
+    out : np.ndarray
+        Shape: [M, D].
     """
+
     assert embed_dim % 2 == 0
     omega = np.arange(embed_dim // 2, dtype=np.float64)
     omega /= embed_dim / 2.
     omega = 1. / 10000 ** omega  # (D/2,)
 
     pos = pos.reshape(-1)  # (M,)
-    out = np.einsum('m,d->md', pos, omega)  # (M, D/2), outer product
+    out = np.einsum('m, d -> md', pos, omega)  # (M, D/2), outer product
 
     emb_sin = np.sin(out)  # (M, D/2)
     emb_cos = np.cos(out)  # (M, D/2)
@@ -55,14 +59,7 @@ def get_1d_sincos_pos_embed_from_grid(embed_dim, pos):
 
 
 class ImageEncoder(nn.Module):
-    def __init__(
-        self,
-        version=None,
-        config=None,
-        use_cls_token=True,
-        image_size=224,
-        **kwargs,
-    ):
+    def __init__(self, version=None, config=None, use_cls_token=True, image_size=224, **kwargs):
         super().__init__()
 
         if config is None:
@@ -81,10 +78,7 @@ class ImageEncoder(nn.Module):
             [
                 transforms.Resize(image_size, transforms.InterpolationMode.BILINEAR, antialias=True),
                 transforms.CenterCrop(image_size),
-                transforms.Normalize(
-                    mean=self.mean,
-                    std=self.std,
-                ),
+                transforms.Normalize(mean=self.mean, std=self.std),
             ]
         )
 
@@ -106,13 +100,7 @@ class ImageEncoder(nn.Module):
     def unconditional_embedding(self, batch_size, **kwargs):
         device = next(self.model.parameters()).device
         dtype = next(self.model.parameters()).dtype
-        zero = torch.zeros(
-            batch_size,
-            self.num_patches,
-            self.model.config.hidden_size,
-            device=device,
-            dtype=dtype,
-        )
+        zero = torch.zeros(batch_size, self.num_patches, self.model.config.hidden_size, device=device, dtype=dtype)
 
         return zero
 
@@ -132,21 +120,12 @@ class DinoImageEncoder(ImageEncoder):
 
 
 class DinoImageEncoderMV(DinoImageEncoder):
-    def __init__(
-        self,
-        version=None,
-        config=None,
-        use_cls_token=True,
-        image_size=224,
-        view_num=4,
-        **kwargs,
-    ):
+    def __init__(self, version=None, config=None, use_cls_token=True, image_size=224, view_num=4, **kwargs):
         super().__init__(version, config, use_cls_token, image_size, **kwargs)
         self.view_num = view_num
         self.num_patches = self.num_patches
         pos = np.arange(self.view_num, dtype=np.float32)
-        view_embedding = torch.from_numpy(
-            get_1d_sincos_pos_embed_from_grid(self.model.config.hidden_size, pos)).float()
+        view_embedding = torch.from_numpy(get_1d_sincos_pos_embed_from_grid(self.model.config.hidden_size, pos)).float()
 
         view_embedding = view_embedding.unsqueeze(1).repeat(1, self.num_patches, 1)
         self.view_embed = view_embedding.unsqueeze(0)
@@ -165,10 +144,7 @@ class DinoImageEncoderMV(DinoImageEncoder):
         outputs = self.model(inputs)
 
         last_hidden_state = outputs.last_hidden_state
-        last_hidden_state = last_hidden_state.view(
-            bs, num_views, last_hidden_state.shape[-2],
-            last_hidden_state.shape[-1]
-        )
+        last_hidden_state = last_hidden_state.view(bs, num_views, last_hidden_state.shape[-2], last_hidden_state.shape[-1])
 
         view_embedding = self.view_embed.to(last_hidden_state.dtype).to(last_hidden_state.device)
         if view_idxs is not None:
@@ -183,20 +159,13 @@ class DinoImageEncoderMV(DinoImageEncoder):
         if num_views != self.view_num:
             view_embedding = view_embedding[:, :num_views, ...]
         last_hidden_state = last_hidden_state + view_embedding
-        last_hidden_state = last_hidden_state.view(bs, num_views * last_hidden_state.shape[-2],
-                                                   last_hidden_state.shape[-1])
+        last_hidden_state = last_hidden_state.view(bs, num_views * last_hidden_state.shape[-2], last_hidden_state.shape[-1])
         return last_hidden_state
 
     def unconditional_embedding(self, batch_size, view_idxs=None, **kwargs):
         device = next(self.model.parameters()).device
         dtype = next(self.model.parameters()).dtype
-        zero = torch.zeros(
-            batch_size,
-            self.num_patches * len(view_idxs[0]),
-            self.model.config.hidden_size,
-            device=device,
-            dtype=dtype,
-        )
+        zero = torch.zeros(batch_size, self.num_patches * len(view_idxs[0]), self.model.config.hidden_size, device=device, dtype=dtype)
         return zero
 
 
@@ -208,15 +177,11 @@ def build_image_encoder(config):
     elif config['type'] == 'DinoImageEncoderMV':
         return DinoImageEncoderMV(**config['kwargs'])
     else:
-        raise ValueError(f'Unknown image encoder type: {config["type"]}')
+        raise ValueError(f"Unknown image encoder type: {config['type']}")
 
 
 class DualImageEncoder(nn.Module):
-    def __init__(
-        self,
-        main_image_encoder,
-        additional_image_encoder,
-    ):
+    def __init__(self, main_image_encoder, additional_image_encoder):
         super().__init__()
         self.main_image_encoder = build_image_encoder(main_image_encoder)
         self.additional_image_encoder = build_image_encoder(additional_image_encoder)
@@ -237,21 +202,14 @@ class DualImageEncoder(nn.Module):
 
 
 class SingleImageEncoder(nn.Module):
-    def __init__(
-        self,
-        main_image_encoder,
-    ):
+    def __init__(self, main_image_encoder):
         super().__init__()
         self.main_image_encoder = build_image_encoder(main_image_encoder)
 
     def forward(self, image, mask=None, **kwargs):
-        outputs = {
-            'main': self.main_image_encoder(image, mask=mask, **kwargs),
-        }
+        outputs = {'main': self.main_image_encoder(image, mask=mask, **kwargs)}
         return outputs
 
     def unconditional_embedding(self, batch_size, **kwargs):
-        outputs = {
-            'main': self.main_image_encoder.unconditional_embedding(batch_size, **kwargs),
-        }
+        outputs = {'main': self.main_image_encoder.unconditional_embedding(batch_size, **kwargs)}
         return outputs

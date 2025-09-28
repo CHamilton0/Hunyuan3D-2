@@ -19,7 +19,7 @@ def remesh_mesh(mesh_path, remesh_path, method='trimesh'):
     if method == 'trimesh':
         mesh_simplify_trimesh(mesh_path, remesh_path)
     else:
-        raise f'Method {method} has not been implemented.'
+        raise Exception(f"Method {method} has not been implemented.")
 
 
 def mesh_simplify_trimesh(inputpath, outputpath):

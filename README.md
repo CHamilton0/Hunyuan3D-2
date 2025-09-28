@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/efb402a1-0b09-41e0-a6cb-259d442e76aa">
-</p>
+<p align="center"><img src="https://github.com/user-attachments/assets/efb402a1-0b09-41e0-a6cb-259d442e76aa"></p>
 
 <div align="center">
   <a href="https://3d.hunyuan.tencent.com" target="_blank"><img src="https://img.shields.io/badge/Official%20Site-333399.svg?logo=homepage" height="22px"></a>
@@ -13,15 +11,13 @@
   <a href="#community-resources" target="_blank"><img src="https://img.shields.io/badge/Community-lavender.svg?logo=homeassistantcommunitystore" height="22px"></a>
 </div>
 
-[//]: # ( <a href="#" target="_blank"><img src="https://img.shields.io/badge/Report-b5212f.svg?logo=arxiv" height="22px"></a> )
-[//]: # ( <a href="#" target="_blank"><img src="https://img.shields.io/badge/Colab-8f2628.svg?logo=googlecolab" height="22px"></a> )
-[//]: # ( <a href="#"><img alt="PyPI - Downloads" src="https://img.shields.io/pypi/v/mulankit?logo=pypi" height="22px"></a> )
+[//]: # (<a href="#" target="_blank"><img src="https://img.shields.io/badge/Report-b5212f.svg?logo=arxiv" height="22px"></a>)
+[//]: # (<a href="#" target="_blank"><img src="https://img.shields.io/badge/Colab-8f2628.svg?logo=googlecolab" height="22px"></a>)
+[//]: # (<a href="#"><img alt="PyPI - Downloads" src="https://img.shields.io/pypi/v/mulankit?logo=pypi" height="22px"></a>)
 
 <br>
 
-<p align="center">
-  "Living out everyone’s imagination on creating and manipulating 3D assets."
-</p>
+<p align="center">"Living out everyone’s imagination on creating and manipulating 3D assets."</p>
 
 
 ## **Hunyuan3D 2.0**
@@ -31,11 +27,9 @@
 Hunyuan3D 2.0 features a two-stage generation pipeline, starting with the creation of a bare mesh, followed by the synthesis of a texture map for that mesh. This
 strategy is effective for decoupling the difficulties of shape and texture generation and also provides flexibility for texturing either generated or handcrafted meshes.
 
-> Note: Texture synthesis was removed for this project.
+> **Note**: Texture synthesis was removed for this project.
 
-<p align="left">
-  <img src="assets/images/arch.jpg">
-</p>
+<p align="left"><img src="assets/images/arch.jpg"></p>
 
 
 ## **Contents**
@@ -88,19 +82,13 @@ python3 gradio_app.py
 ```bash
 # Hunyuan3D-2mini (WORKING)
 python3 gradio_app.py --model-path tencent/Hunyuan3D-2mini --subfolder hunyuan3d-dit-v2-mini
-```
 
-```bash
 # Hunyuan3D-2mv
 python3 gradio_app.py --model-path tencent/Hunyuan3D-2mv --subfolder hunyuan3d-dit-v2-mv
-```
 
-```bash
-# Hunyuan3D-2 (NOT WORKING)
+# Hunyuan3D-2 (WORKING)
 python3 gradio_app.py --model-path tencent/Hunyuan3D-2 --subfolder hunyuan3d-dit-v2-0
-```
 
-```bash
 # Hunyuan3D-2.1 (NOT WORKING -- No Safetensors)
 python3 gradio_app.py --model-path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-dit-v2-1
 ```
@@ -111,14 +99,10 @@ python3 gradio_app.py --model-path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-d
 ```bash
 # Hunyuan3D-2mini (WORKING)
 python3 gradio_app.py --model-path tencent/Hunyuan3D-2mini --subfolder hunyuan3d-dit-v2-mini-turbo --enable-flashvdm
-```
 
-```bash
 # Hunyuan3D-2mv
 python3 gradio_app.py --model-path tencent/Hunyuan3D-2mv --subfolder hunyuan3d-dit-v2-mv-turbo --enable-flashvdm
-```
 
-```bash
 # Hunyuan3D-2
 python3 gradio_app.py --model-path tencent/Hunyuan3D-2 --subfolder hunyuan3d-dit-v2-0-turbo --enable-flashvdm
 ```

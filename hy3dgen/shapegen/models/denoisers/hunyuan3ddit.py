@@ -15,7 +15,6 @@
 import math
 import os
 from dataclasses import dataclass
-from typing import List, Tuple, Optional
 
 import torch
 from einops import rearrange
@@ -26,7 +25,7 @@ if os.environ.get('USE_SAGEATTN', '0') == '1':
     try:
         from sageattention import sageattn
     except ImportError:
-        raise ImportError('Please install the package "sageattention" to use this USE_SAGEATTN.')
+        raise ImportError("Please install the package 'sageattention' to use this USE_SAGEATTN.")
     scaled_dot_product_attention = sageattn
 
 
@@ -36,20 +35,29 @@ def attention(q: Tensor, k: Tensor, v: Tensor, **kwargs) -> Tensor:
     return x
 
 
-def timestep_embedding(t: Tensor, dim, max_period=10000, time_factor: float = 1000.0):
+def timestep_embedding(t: Tensor, dim: int, max_period: int = 10000, time_factor: float = 1000.0):
     """
     Create sinusoidal timestep embeddings.
-    :param t: a 1-D Tensor of N indices, one per batch element.
-                      These may be fractional.
-    :param dim: the dimension of the output.
-    :param max_period: controls the minimum frequency of the embeddings.
-    :return: an (N, D) Tensor of positional embeddings.
+
+    Parameters
+    ----------
+    t : torch.Tensor
+        A 1-D Tensor of N indices, one per batch element. These may be fractional. Shape: [N,].
+    dim : int
+        The dimension of the output.
+    max_period : int, optional, default=10000
+        Controls the minimum frequency of the embeddings.
+    time_factor : float, optional, default=1000.0
+
+    Returns
+    -------
+    embedding : torch.Tensor
+        A Tensor of positional embeddings. Shape: [N, D].
     """
+
     t = time_factor * t
     half = dim // 2
-    freqs = torch.exp(-math.log(max_period) * torch.arange(start=0, end=half, dtype=torch.float32) / half).to(
-        t.device
-    )
+    freqs = torch.exp(-math.log(max_period) * torch.arange(start=0, end=half, dtype=torch.float32) / half).to(t.device)
 
     args = t[:, None].float() * freqs[None]
     embedding = torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
@@ -98,19 +106,14 @@ class QKNorm(torch.nn.Module):
         self.query_norm = RMSNorm(dim)
         self.key_norm = RMSNorm(dim)
 
-    def forward(self, q: Tensor, k: Tensor, v: Tensor) -> Tuple[Tensor, Tensor]:
+    def forward(self, q: Tensor, k: Tensor, v: Tensor) -> tuple[Tensor, Tensor]:
         q = self.query_norm(q)
         k = self.key_norm(k)
         return q.to(v), k.to(v)
 
 
 class SelfAttention(nn.Module):
-    def __init__(
-        self,
-        dim: int,
-        num_heads: int = 8,
-        qkv_bias: bool = False,
-    ):
+    def __init__(self, dim: int, num_heads: int = 8, qkv_bias: bool = False):
         super().__init__()
         self.num_heads = num_heads
         head_dim = dim // num_heads
@@ -142,24 +145,15 @@ class Modulation(nn.Module):
         self.multiplier = 6 if double else 3
         self.lin = nn.Linear(dim, self.multiplier * dim, bias=True)
 
-    def forward(self, vec: Tensor) -> Tuple[ModulationOut, Optional[ModulationOut]]:
+    def forward(self, vec: Tensor) -> tuple[ModulationOut, ModulationOut | None]:
         out = self.lin(nn.functional.silu(vec))[:, None, :]
         out = out.chunk(self.multiplier, dim=-1)
 
-        return (
-            ModulationOut(*out[:3]),
-            ModulationOut(*out[3:]) if self.is_double else None,
-        )
+        return (ModulationOut(*out[:3]), ModulationOut(*out[3:]) if self.is_double else None)
 
 
 class DoubleStreamBlock(nn.Module):
-    def __init__(
-        self,
-        hidden_size: int,
-        num_heads: int,
-        mlp_ratio: float,
-        qkv_bias: bool = False,
-    ):
+    def __init__(self, hidden_size: int, num_heads: int, mlp_ratio: float, qkv_bias: bool = False):
         super().__init__()
         mlp_hidden_dim = int(hidden_size * mlp_ratio)
         self.num_heads = num_heads
@@ -186,7 +180,7 @@ class DoubleStreamBlock(nn.Module):
             nn.Linear(mlp_hidden_dim, hidden_size, bias=True),
         )
 
-    def forward(self, img: Tensor, txt: Tensor, vec: Tensor, pe: Tensor) -> Tuple[Tensor, Tensor]:
+    def forward(self, img: Tensor, txt: Tensor, vec: Tensor, pe: Tensor) -> tuple[Tensor, Tensor]:
         img_mod1, img_mod2 = self.img_mod(vec)
         txt_mod1, txt_mod2 = self.txt_mod(vec)
 
@@ -218,18 +212,9 @@ class DoubleStreamBlock(nn.Module):
 
 
 class SingleStreamBlock(nn.Module):
-    """
-    A DiT block with parallel linear layers as described in
-    https://arxiv.org/abs/2302.05442 and adapted modulation interface.
-    """
+    """A DiT block with parallel linear layers as described in https://arxiv.org/abs/2302.05442 and adapted modulation interface."""
 
-    def __init__(
-        self,
-        hidden_size: int,
-        num_heads: int,
-        mlp_ratio: float = 4.0,
-        qk_scale: Optional[float] = None,
-    ):
+    def __init__(self, hidden_size: int, num_heads: int, mlp_ratio: float = 4.0, qk_scale: float | None = None):
         super().__init__()
 
         self.hidden_dim = hidden_size
@@ -283,21 +268,9 @@ class LastLayer(nn.Module):
 
 class Hunyuan3DDiT(nn.Module):
     def __init__(
-        self,
-        in_channels: int = 64,
-        context_in_dim: int = 1536,
-        hidden_size: int = 1024,
-        mlp_ratio: float = 4.0,
-        num_heads: int = 16,
-        depth: int = 16,
-        depth_single_blocks: int = 32,
-        axes_dim: List[int] = [64],
-        theta: int = 10_000,
-        qkv_bias: bool = True,
-        time_factor: float = 1000,
-        guidance_embed: bool = False,
-        ckpt_path: Optional[str] = None,
-        **kwargs,
+        self, in_channels: int = 64, context_in_dim: int = 1536, hidden_size: int = 1024, mlp_ratio: float = 4.0, num_heads: int = 16, depth: int = 16,
+        depth_single_blocks: int = 32, axes_dim: list[int] = [64], theta: int = 10_000, qkv_bias: bool = True, time_factor: float = 1000.0,
+        guidance_embed: bool = False, ckpt_path: str | None = None, **kwargs,
     ):
         super().__init__()
         self.in_channels = in_channels
@@ -315,9 +288,7 @@ class Hunyuan3DDiT(nn.Module):
         self.guidance_embed = guidance_embed
 
         if hidden_size % num_heads != 0:
-            raise ValueError(
-                f"Hidden size {hidden_size} must be divisible by num_heads {num_heads}"
-            )
+            raise ValueError(f"Hidden size {hidden_size} must be divisible by num_heads {num_heads}")
         pe_dim = hidden_size // num_heads
         if sum(axes_dim) != pe_dim:
             raise ValueError(f"Got {axes_dim} but expected positional dim {pe_dim}")
@@ -326,37 +297,20 @@ class Hunyuan3DDiT(nn.Module):
         self.latent_in = nn.Linear(self.in_channels, self.hidden_size, bias=True)
         self.time_in = MLPEmbedder(in_dim=256, hidden_dim=self.hidden_size)
         self.cond_in = nn.Linear(context_in_dim, self.hidden_size)
-        self.guidance_in = (
-            MLPEmbedder(in_dim=256, hidden_dim=self.hidden_size) if guidance_embed else nn.Identity()
-        )
+        self.guidance_in = (MLPEmbedder(in_dim=256, hidden_dim=self.hidden_size) if guidance_embed else nn.Identity())
 
         self.double_blocks = nn.ModuleList(
-            [
-                DoubleStreamBlock(
-                    self.hidden_size,
-                    self.num_heads,
-                    mlp_ratio=mlp_ratio,
-                    qkv_bias=qkv_bias,
-                )
-                for _ in range(depth)
-            ]
+            [DoubleStreamBlock(self.hidden_size, self.num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias) for _ in range(depth)]
         )
 
         self.single_blocks = nn.ModuleList(
-            [
-                SingleStreamBlock(
-                    self.hidden_size,
-                    self.num_heads,
-                    mlp_ratio=mlp_ratio,
-                )
-                for _ in range(depth_single_blocks)
-            ]
+            [SingleStreamBlock(self.hidden_size, self.num_heads, mlp_ratio=mlp_ratio) for _ in range(depth_single_blocks)]
         )
 
         self.final_layer = LastLayer(self.hidden_size, 1, self.out_channels)
 
         if ckpt_path is not None:
-            print('restored denoiser ckpt', ckpt_path)
+            print("Restored denoiser ckpt", ckpt_path)
 
             ckpt = torch.load(ckpt_path, map_location="cpu")
             if 'state_dict' not in ckpt:
@@ -375,25 +329,19 @@ class Hunyuan3DDiT(nn.Module):
                 else:
                     final_state_dict[k] = v
             missing, unexpected = self.load_state_dict(final_state_dict, strict=False)
-            print('unexpected keys:', unexpected)
-            print('missing keys:', missing)
+            print("Unexpected keys:", unexpected)
+            print("Missing keys:", missing)
 
-    def forward(
-        self,
-        x,
-        t,
-        contexts,
-        **kwargs,
-    ) -> Tensor:
+    def forward(self, x, t, contexts, **kwargs) -> Tensor:
         cond = contexts['main']
         latent = self.latent_in(x)
 
-        vec = self.time_in(timestep_embedding(t, 256, self.time_factor).to(dtype=latent.dtype))
+        vec = self.time_in(timestep_embedding(t, 256, time_factor=self.time_factor).to(dtype=latent.dtype))
         if self.guidance_embed:
             guidance = kwargs.get('guidance', None)
             if guidance is None:
                 raise ValueError("Didn't get guidance strength for guidance distilled model.")
-            vec = vec + self.guidance_in(timestep_embedding(guidance, 256, self.time_factor))
+            vec = vec + self.guidance_in(timestep_embedding(guidance, 256, time_factor=self.time_factor))
 
         cond = self.cond_in(cond)
         pe = None

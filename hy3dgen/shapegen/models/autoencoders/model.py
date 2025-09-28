@@ -14,7 +14,6 @@
 
 
 import os
-from typing import Union, List
 
 import numpy as np
 import torch
@@ -28,7 +27,7 @@ from ...utils import logger, synchronize_timer, smart_load_model
 
 
 class DiagonalGaussianDistribution(object):
-    def __init__(self, parameters: Union[torch.Tensor, List[torch.Tensor]], deterministic=False, feat_dim=1):
+    def __init__(self, parameters: torch.Tensor | list[torch.Tensor], deterministic=False, feat_dim=1):
         self.feat_dim = feat_dim
         self.parameters = parameters
 
@@ -54,22 +53,17 @@ class DiagonalGaussianDistribution(object):
             return torch.Tensor([0.])
         else:
             if other is None:
-                return 0.5 * torch.mean(torch.pow(self.mean, 2)
-                                        + self.var - 1.0 - self.logvar,
-                                        dim=dims)
+                return 0.5 * torch.mean(torch.pow(self.mean, 2) + self.var - 1.0 - self.logvar, dim=dims)
             else:
                 return 0.5 * torch.mean(
-                    torch.pow(self.mean - other.mean, 2) / other.var
-                    + self.var / other.var - 1.0 - self.logvar + other.logvar,
-                    dim=dims)
+                    torch.pow(self.mean - other.mean, 2) / other.var + self.var / other.var - 1.0 - self.logvar + other.logvar, dim=dims,
+                )
 
     def nll(self, sample, dims=(1, 2, 3)):
         if self.deterministic:
             return torch.Tensor([0.])
         logtwopi = np.log(2.0 * np.pi)
-        return 0.5 * torch.sum(
-            logtwopi + self.logvar + torch.pow(sample - self.mean, 2) / self.var,
-            dim=dims)
+        return 0.5 * torch.sum(logtwopi + self.logvar + torch.pow(sample - self.mean, 2) / self.var, dim=dims)
 
     def mode(self):
         return self.mean
@@ -79,15 +73,7 @@ class VectsetVAE(nn.Module):
 
     @classmethod
     @synchronize_timer('VectsetVAE Model Loading')
-    def from_single_file(
-        cls,
-        ckpt_path,
-        config_path,
-        device='cuda',
-        dtype=torch.float16,
-        use_safetensors=None,
-        **kwargs,
-    ):
+    def from_single_file(cls, ckpt_path, config_path, device='cuda', dtype=torch.float16, use_safetensors=True, **kwargs):
         # load config
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
@@ -96,7 +82,7 @@ class VectsetVAE(nn.Module):
         if use_safetensors:
             ckpt_path = ckpt_path.replace('.ckpt', '.safetensors')
         if not os.path.exists(ckpt_path):
-            raise FileNotFoundError(f"Model file {ckpt_path} not found")
+            raise FileNotFoundError(f"Model file {ckpt_path} not found.")
 
         logger.info(f"Loading model from {ckpt_path}")
         if use_safetensors:
@@ -114,31 +100,10 @@ class VectsetVAE(nn.Module):
         return model
 
     @classmethod
-    def from_pretrained(
-        cls,
-        model_path,
-        device='cuda',
-        dtype=torch.float16,
-        use_safetensors=True,
-        variant='fp16',
-        subfolder='hunyuan3d-vae-v2-0',
-        **kwargs,
-    ):
-        config_path, ckpt_path = smart_load_model(
-            model_path,
-            subfolder=subfolder,
-            use_safetensors=use_safetensors,
-            variant=variant
-        )
+    def from_pretrained(cls, model_path, device='cuda', dtype=torch.float16, use_safetensors=True, variant='fp16', subfolder='hunyuan3d-vae-v2-0', **kwargs):
+        config_path, ckpt_path = smart_load_model(model_path, subfolder=subfolder, use_safetensors=use_safetensors, variant=variant)
 
-        return cls.from_single_file(
-            ckpt_path,
-            config_path,
-            device=device,
-            dtype=dtype,
-            use_safetensors=use_safetensors,
-            **kwargs
-        )
+        return cls.from_single_file(ckpt_path, config_path, device=device, dtype=dtype, use_safetensors=use_safetensors, **kwargs)
 
     def init_from_ckpt(self, path, ignore_keys=()):
         state_dict = torch.load(path, map_location="cpu")
@@ -150,16 +115,12 @@ class VectsetVAE(nn.Module):
                     print("Deleting key {} from state_dict.".format(k))
                     del state_dict[k]
         missing, unexpected = self.load_state_dict(state_dict, strict=False)
-        print(f"Restored from {path} with {len(missing)} missing and {len(unexpected)} unexpected keys")
+        print(f"Restored from {path} with {len(missing)} missing and {len(unexpected)} unexpected keys.")
         if len(missing) > 0:
             print(f"Missing Keys: {missing}")
             print(f"Unexpected Keys: {unexpected}")
 
-    def __init__(
-        self,
-        volume_decoder=None,
-        surface_extractor=None
-    ):
+    def __init__(self, volume_decoder=None, surface_extractor=None):
         super().__init__()
         if volume_decoder is None:
             volume_decoder = VanillaVolumeDecoder()
@@ -175,20 +136,14 @@ class VectsetVAE(nn.Module):
             outputs = self.surface_extractor(grid_logits, **kwargs)
         return outputs
 
-    def enable_flashvdm_decoder(
-        self,
-        enabled: bool = True,
-        adaptive_kv_selection=True,
-        topk_mode='mean',
-        mc_algo='dmc',
-    ):
+    def enable_flashvdm_decoder(self, enabled: bool = True, adaptive_kv_selection=True, topk_mode='mean', mc_algo='dmc'):
         if enabled:
             if adaptive_kv_selection:
                 self.volume_decoder = FlashVDMVolumeDecoding(topk_mode)
             else:
                 self.volume_decoder = HierarchicalVolumeDecoding()
             if mc_algo not in SurfaceExtractors.keys():
-                raise ValueError(f'Unsupported mc_algo {mc_algo}, available: {list(SurfaceExtractors.keys())}')
+                raise ValueError(f"Unsupported mc_algo {mc_algo}, available: {list(SurfaceExtractors.keys())}")
             self.surface_extractor = SurfaceExtractors[mc_algo]()
         else:
             self.volume_decoder = VanillaVolumeDecoder()
@@ -197,30 +152,10 @@ class VectsetVAE(nn.Module):
 
 class ShapeVAE(VectsetVAE):
     def __init__(
-        self,
-        *,
-        num_latents: int,
-        embed_dim: int,
-        width: int,
-        heads: int,
-        num_decoder_layers: int,
-        num_encoder_layers: int = 8,
-        pc_size: int = 5120,
-        pc_sharpedge_size: int = 5120,
-        point_feats: int = 3,
-        downsample_ratio: int = 20,
-        geo_decoder_downsample_ratio: int = 1,
-        geo_decoder_mlp_expand_ratio: int = 4,
-        geo_decoder_ln_post: bool = True,
-        num_freqs: int = 8,
-        include_pi: bool = True,
-        qkv_bias: bool = True,
-        qk_norm: bool = False,
-        label_type: str = "binary",
-        drop_path_rate: float = 0.0,
-        scale_factor: float = 1.0,
-        use_ln_post: bool = True,
-        ckpt_path=None
+        self, *, num_latents: int, embed_dim: int, width: int, heads: int, num_decoder_layers: int, num_encoder_layers: int = 8, pc_size: int = 5120,
+        pc_sharpedge_size: int = 5120, point_feats: int = 3, downsample_ratio: int = 20, geo_decoder_downsample_ratio: int = 1, geo_decoder_mlp_expand_ratio: int = 4,
+        geo_decoder_ln_post: bool = True, num_freqs: int = 8, include_pi: bool = True, qkv_bias: bool = True, qk_norm: bool = False, label_type: str = "binary",
+        drop_path_rate: float = 0.0, scale_factor: float = 1.0, use_ln_post: bool = True, ckpt_path=None,
     ):
         super().__init__()
         self.geo_decoder_ln_post = geo_decoder_ln_post
@@ -229,45 +164,21 @@ class ShapeVAE(VectsetVAE):
         self.fourier_embedder = FourierEmbedder(num_freqs=num_freqs, include_pi=include_pi)
 
         self.encoder = PointCrossAttentionEncoder(
-            fourier_embedder=self.fourier_embedder,
-            num_latents=num_latents,
-            downsample_ratio=self.downsample_ratio,
-            pc_size=pc_size,
-            pc_sharpedge_size=pc_sharpedge_size,
-            point_feats=point_feats,
-            width=width,
-            heads=heads,
-            layers=num_encoder_layers,
-            qkv_bias=qkv_bias,
-            use_ln_post=use_ln_post,
-            qk_norm=qk_norm
+            fourier_embedder=self.fourier_embedder, num_latents=num_latents, downsample_ratio=self.downsample_ratio, pc_size=pc_size, pc_sharpedge_size=pc_sharpedge_size,
+            point_feats=point_feats, width=width, heads=heads, layers=num_encoder_layers, qkv_bias=qkv_bias, use_ln_post=use_ln_post, qk_norm=qk_norm,
         )
 
         self.pre_kl = nn.Linear(width, embed_dim * 2)
         self.post_kl = nn.Linear(embed_dim, width)
 
         self.transformer = Transformer(
-            n_ctx=num_latents,
-            width=width,
-            layers=num_decoder_layers,
-            heads=heads,
-            qkv_bias=qkv_bias,
-            qk_norm=qk_norm,
-            drop_path_rate=drop_path_rate
+            n_ctx=num_latents, width=width, layers=num_decoder_layers, heads=heads, qkv_bias=qkv_bias, qk_norm=qk_norm, drop_path_rate=drop_path_rate,
         )
 
         self.geo_decoder = CrossAttentionDecoder(
-            fourier_embedder=self.fourier_embedder,
-            out_channels=1,
-            num_latents=num_latents,
-            mlp_expand_ratio=geo_decoder_mlp_expand_ratio,
-            downsample_ratio=geo_decoder_downsample_ratio,
-            enable_ln_post=self.geo_decoder_ln_post,
-            width=width // geo_decoder_downsample_ratio,
-            heads=heads // geo_decoder_downsample_ratio,
-            qkv_bias=qkv_bias,
-            qk_norm=qk_norm,
-            label_type=label_type,
+            fourier_embedder=self.fourier_embedder, out_channels=1, num_latents=num_latents, mlp_expand_ratio=geo_decoder_mlp_expand_ratio,
+            downsample_ratio=geo_decoder_downsample_ratio, enable_ln_post=self.geo_decoder_ln_post, width=width // geo_decoder_downsample_ratio,
+            heads=heads // geo_decoder_downsample_ratio, qkv_bias=qkv_bias, qk_norm=qk_norm, label_type=label_type,
         )
 
         self.scale_factor = scale_factor

@@ -14,7 +14,6 @@
 
 import os
 import tempfile
-from typing import Union
 
 import numpy as np
 import pymeshlab
@@ -39,21 +38,14 @@ def reduce_face(mesh: pymeshlab.MeshSet, max_facenum: int = 200000):
         return mesh
 
     mesh.apply_filter(
-        "meshing_decimation_quadric_edge_collapse",
-        targetfacenum=max_facenum,
-        qualitythr=1.0,
-        preserveboundary=True,
-        boundaryweight=3,
-        preservenormal=True,
-        preservetopology=True,
-        autoclean=True
+        "meshing_decimation_quadric_edge_collapse", targetfacenum=max_facenum, qualitythr=1.0, preserveboundary=True, boundaryweight=3,
+        preservenormal=True, preservetopology=True, autoclean=True,
     )
     return mesh
 
 
 def remove_floater(mesh: pymeshlab.MeshSet):
-    mesh.apply_filter("compute_selection_by_small_disconnected_components_per_face",
-                      nbfaceratio=0.005)
+    mesh.apply_filter("compute_selection_by_small_disconnected_components_per_face", nbfaceratio=0.005)
     mesh.apply_filter("compute_selection_transfer_face_to_vertex", inclusive=False)
     mesh.apply_filter("meshing_remove_selected_vertices_and_faces")
     return mesh
@@ -101,7 +93,7 @@ def export_mesh(input, output):
     return mesh
 
 
-def import_mesh(mesh: Union[pymeshlab.MeshSet, trimesh.Trimesh, Latent2MeshOutput, str]) -> pymeshlab.MeshSet:
+def import_mesh(mesh: pymeshlab.MeshSet | trimesh.Trimesh | Latent2MeshOutput | str) -> pymeshlab.MeshSet:
     if isinstance(mesh, str):
         mesh = load_mesh(mesh)
     elif isinstance(mesh, Latent2MeshOutput):
@@ -117,11 +109,7 @@ def import_mesh(mesh: Union[pymeshlab.MeshSet, trimesh.Trimesh, Latent2MeshOutpu
 
 class FaceReducer:
     @synchronize_timer('FaceReducer')
-    def __call__(
-        self,
-        mesh: Union[pymeshlab.MeshSet, trimesh.Trimesh, Latent2MeshOutput, str],
-        max_facenum: int = 40000
-    ) -> Union[pymeshlab.MeshSet, trimesh.Trimesh]:
+    def __call__(self, mesh: pymeshlab.MeshSet | trimesh.Trimesh | Latent2MeshOutput | str, max_facenum: int = 40000) -> pymeshlab.MeshSet | trimesh.Trimesh:
         ms = import_mesh(mesh)
         ms = reduce_face(ms, max_facenum=max_facenum)
         mesh = export_mesh(mesh, ms)
@@ -130,10 +118,7 @@ class FaceReducer:
 
 class FloaterRemover:
     @synchronize_timer('FloaterRemover')
-    def __call__(
-        self,
-        mesh: Union[pymeshlab.MeshSet, trimesh.Trimesh, Latent2MeshOutput, str],
-    ) -> Union[pymeshlab.MeshSet, trimesh.Trimesh, Latent2MeshOutput]:
+    def __call__(self, mesh: pymeshlab.MeshSet | trimesh.Trimesh | Latent2MeshOutput | str) -> pymeshlab.MeshSet | trimesh.Trimesh | Latent2MeshOutput:
         ms = import_mesh(mesh)
         ms = remove_floater(ms)
         mesh = export_mesh(mesh, ms)
@@ -142,10 +127,7 @@ class FloaterRemover:
 
 class DegenerateFaceRemover:
     @synchronize_timer('DegenerateFaceRemover')
-    def __call__(
-        self,
-        mesh: Union[pymeshlab.MeshSet, trimesh.Trimesh, Latent2MeshOutput, str],
-    ) -> Union[pymeshlab.MeshSet, trimesh.Trimesh, Latent2MeshOutput]:
+    def __call__(self, mesh: pymeshlab.MeshSet | trimesh.Trimesh | Latent2MeshOutput | str) -> pymeshlab.MeshSet | trimesh.Trimesh | Latent2MeshOutput:
         ms = import_mesh(mesh)
 
         with tempfile.NamedTemporaryFile(suffix='.ply', delete=False) as temp_file:
@@ -158,9 +140,8 @@ class DegenerateFaceRemover:
 
 
 def mesh_normalize(mesh):
-    """
-    Normalize mesh vertices to sphere
-    """
+    """Normalize mesh vertices to sphere."""
+
     scale_factor = 1.2
     vtx_pos = np.asarray(mesh.vertices)
     max_bb = (vtx_pos - 0).max(0)[0]
@@ -184,10 +165,7 @@ class MeshSimplifier:
         self.executable = executable
 
     @synchronize_timer('MeshSimplifier')
-    def __call__(
-        self,
-        mesh: Union[trimesh.Trimesh],
-    ) -> Union[trimesh.Trimesh]:
+    def __call__(self, mesh: trimesh.Trimesh) -> trimesh.Trimesh:
         with tempfile.NamedTemporaryFile(suffix='.obj', delete=False) as temp_input:
             with tempfile.NamedTemporaryFile(suffix='.obj', delete=False) as temp_output:
                 mesh.export(temp_input.name)

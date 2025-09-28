@@ -27,19 +27,28 @@ def modulate(x, shift, scale):
     return x * (1 + scale.unsqueeze(1)) + shift.unsqueeze(1)
 
 
-def get_1d_sincos_pos_embed_from_grid(embed_dim, pos):
+def get_1d_sincos_pos_embed_from_grid(embed_dim: int, pos: np.ndarray):
     """
-    embed_dim: output dimension for each position
-    pos: a list of positions to be encoded: size (M,)
-    out: (M, D)
+    Parameters
+    ----------
+    embed_dim : int
+        Output dimension for each position.
+    pos : list | np.ndarray
+        A list of positions to be encoded. Shape: [M,].
+
+    Returns
+    -------
+    out : np.ndarray
+        Shape: [M, D].
     """
+
     assert embed_dim % 2 == 0
     omega = np.arange(embed_dim // 2, dtype=np.float64)
     omega /= embed_dim / 2.
     omega = 1. / 10000 ** omega  # (D/2,)
 
     pos = pos.reshape(-1)  # (M,)
-    out = np.einsum('m,d->md', pos, omega)  # (M, D/2), outer product
+    out = np.einsum('m, d -> md', pos, omega)  # (M, D/2), outer product
 
     emb_sin = np.sin(out)  # (M, D/2)
     emb_cos = np.cos(out)  # (M, D/2)
@@ -48,12 +57,7 @@ def get_1d_sincos_pos_embed_from_grid(embed_dim, pos):
 
 
 class Timesteps(nn.Module):
-    def __init__(self,
-                 num_channels: int,
-                 downscale_freq_shift: float = 0.0,
-                 scale: int = 1,
-                 max_period: int = 10000
-                 ):
+    def __init__(self, num_channels: int, downscale_freq_shift: float = 0.0, scale: int = 1, max_period: int = 10000):
         super().__init__()
         self.num_channels = num_channels
         self.downscale_freq_shift = downscale_freq_shift
@@ -64,8 +68,7 @@ class Timesteps(nn.Module):
         assert len(timesteps.shape) == 1, "Timesteps should be a 1d-array"
         embedding_dim = self.num_channels
         half_dim = embedding_dim // 2
-        exponent = -math.log(self.max_period) * torch.arange(
-            start=0, end=half_dim, dtype=torch.float32, device=timesteps.device)
+        exponent = -math.log(self.max_period) * torch.arange(start=0, end=half_dim, dtype=torch.float32, device=timesteps.device)
         exponent = exponent / (half_dim - self.downscale_freq_shift)
         emb = torch.exp(exponent)
         emb = timesteps[:, None].float() * emb[None, :]
@@ -77,9 +80,7 @@ class Timesteps(nn.Module):
 
 
 class TimestepEmbedder(nn.Module):
-    """
-    Embeds scalar timesteps into vector representations.
-    """
+    """Embeds scalar timesteps into vector representations."""
 
     def __init__(self, hidden_size, frequency_embedding_size=256, cond_proj_dim=None, out_size=None):
         super().__init__()
@@ -124,17 +125,7 @@ class MLP(nn.Module):
 
 class CrossAttention(nn.Module):
     def __init__(
-        self,
-        qdim,
-        kdim,
-        num_heads,
-        qkv_bias=True,
-        qk_norm=False,
-        norm_layer=nn.LayerNorm,
-        with_decoupled_ca=False,
-        decoupled_ca_dim=16,
-        decoupled_ca_weight=1.0,
-        **kwargs,
+        self, qdim, kdim, num_heads, qkv_bias=True, qk_norm=False, norm_layer=nn.LayerNorm, with_decoupled_ca=False, decoupled_ca_dim=16, decoupled_ca_weight=1.0, **kwargs,
     ):
         super().__init__()
         self.qdim = qdim
@@ -165,13 +156,14 @@ class CrossAttention(nn.Module):
         """
         Parameters
         ----------
-        x: torch.Tensor
-            (batch, seqlen1, hidden_dim) (where hidden_dim = num heads * head dim)
-        y: torch.Tensor
-            (batch, seqlen2, hidden_dim2)
-        freqs_cis_img: torch.Tensor
-            (batch, hidden_dim // 2), RoPE for image
+        x : torch.Tensor
+            Shape: [batch, seqlen1, hidden_dim], where hidden_dim = num heads * head dim.
+        y : torch.Tensor
+            Shape: [batch, seqlen2, hidden_dim2].
+        freqs_cis_img : torch.Tensor
+            RoPE for image. Shape: [batch, hidden_dim // 2].
         """
+
         b, s1, c = x.shape  # [b, s1, D]
 
         if self.with_dca:
@@ -199,26 +191,14 @@ class CrossAttention(nn.Module):
         q = self.q_norm(q)
         k = self.k_norm(k)
 
-        with torch.backends.cuda.sdp_kernel(
-            enable_flash=True,
-            enable_math=False,
-            enable_mem_efficient=True
-        ):
+        with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=True):
             q, k, v = map(lambda t: rearrange(t, 'b n h d -> b h n d', h=self.num_heads), (q, k, v))
-            context = F.scaled_dot_product_attention(
-                q, k, v
-            ).transpose(1, 2).reshape(b, s1, -1)
+            context = F.scaled_dot_product_attention(q, k, v).transpose(1, 2).reshape(b, s1, -1)
 
         if self.with_dca:
-            with torch.backends.cuda.sdp_kernel(
-                enable_flash=True,
-                enable_math=False,
-                enable_mem_efficient=True
-            ):
-                k_dca, v_dca = map(lambda t: rearrange(t, 'b n h d -> b h n d', h=self.num_heads),
-                                   (k_dca, v_dca))
-                context_dca = F.scaled_dot_product_attention(
-                    q, k_dca, v_dca).transpose(1, 2).reshape(b, s1, -1)
+            with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=True):
+                k_dca, v_dca = map(lambda t: rearrange(t, 'b n h d -> b h n d', h=self.num_heads), (k_dca, v_dca))
+                context_dca = F.scaled_dot_product_attention(q, k_dca, v_dca).transpose(1, 2).reshape(b, s1, -1)
 
             context = context + self.dca_weight * context_dca
 
@@ -228,18 +208,9 @@ class CrossAttention(nn.Module):
 
 
 class Attention(nn.Module):
-    """
-    We rename some layer names to align with flash attention
-    """
+    """We rename some layer names to align with flash attention."""
 
-    def __init__(
-        self,
-        dim,
-        num_heads,
-        qkv_bias=True,
-        qk_norm=False,
-        norm_layer=nn.LayerNorm,
-    ):
+    def __init__(self, dim, num_heads, qkv_bias=True, qk_norm=False, norm_layer=nn.LayerNorm):
         super().__init__()
         self.dim = dim
         self.num_heads = num_heads
@@ -276,11 +247,7 @@ class Attention(nn.Module):
         q = self.q_norm(q)  # [b, h, s, d]
         k = self.k_norm(k)  # [b, h, s, d]
 
-        with torch.backends.cuda.sdp_kernel(
-            enable_flash=True,
-            enable_math=False,
-            enable_mem_efficient=True
-        ):
+        with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=True):
             x = F.scaled_dot_product_attention(q, k, v)
             x = x.transpose(1, 2).reshape(B, N, -1)
 
@@ -290,26 +257,9 @@ class Attention(nn.Module):
 
 class HunYuanDiTBlock(nn.Module):
     def __init__(
-        self,
-        hidden_size,
-        c_emb_size,
-        num_heads,
-        text_states_dim=1024,
-        use_flash_attn=False,
-        qk_norm=False,
-        norm_layer=nn.LayerNorm,
-        qk_norm_layer=nn.RMSNorm,
-        with_decoupled_ca=False,
-        decoupled_ca_dim=16,
-        decoupled_ca_weight=1.0,
-        init_scale=1.0,
-        qkv_bias=True,
-        skip_connection=True,
-        timested_modulate=False,
-        use_moe: bool = False,
-        num_experts: int = 8,
-        moe_top_k: int = 2,
-        **kwargs,
+        self, hidden_size, c_emb_size, num_heads, text_states_dim=1024, use_flash_attn=False, qk_norm=False, norm_layer=nn.LayerNorm, qk_norm_layer=nn.RMSNorm,
+        with_decoupled_ca=False, decoupled_ca_dim=16, decoupled_ca_weight=1.0, init_scale=1.0, qkv_bias=True, skip_connection=True, timested_modulate=False,
+        use_moe: bool = False, num_experts: int = 8, moe_top_k: int = 2, **kwargs,
     ):
         super().__init__()
         self.use_flash_attn = use_flash_attn
@@ -317,8 +267,7 @@ class HunYuanDiTBlock(nn.Module):
 
         # ========================= Self-Attention =========================
         self.norm1 = norm_layer(hidden_size, elementwise_affine=use_ele_affine, eps=1e-6)
-        self.attn1 = Attention(hidden_size, num_heads=num_heads, qkv_bias=qkv_bias, qk_norm=qk_norm,
-                               norm_layer=qk_norm_layer)
+        self.attn1 = Attention(hidden_size, num_heads=num_heads, qkv_bias=qkv_bias, qk_norm=qk_norm, norm_layer=qk_norm_layer)
 
         # ========================= FFN =========================
         self.norm2 = norm_layer(hidden_size, elementwise_affine=use_ele_affine, eps=1e-6)
@@ -327,17 +276,13 @@ class HunYuanDiTBlock(nn.Module):
         # Simply use add like SDXL.
         self.timested_modulate = timested_modulate
         if self.timested_modulate:
-            self.default_modulation = nn.Sequential(
-                nn.SiLU(),
-                nn.Linear(c_emb_size, hidden_size, bias=True)
-            )
+            self.default_modulation = nn.Sequential(nn.SiLU(), nn.Linear(c_emb_size, hidden_size, bias=True))
 
         # ========================= Cross-Attention =========================
-        self.attn2 = CrossAttention(hidden_size, text_states_dim, num_heads=num_heads, qkv_bias=qkv_bias,
-                                    qk_norm=qk_norm, norm_layer=qk_norm_layer,
-                                    with_decoupled_ca=with_decoupled_ca, decoupled_ca_dim=decoupled_ca_dim,
-                                    decoupled_ca_weight=decoupled_ca_weight, init_scale=init_scale,
-                                    )
+        self.attn2 = CrossAttention(
+            hidden_size, text_states_dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_norm=qk_norm, norm_layer=qk_norm_layer,
+            with_decoupled_ca=with_decoupled_ca, decoupled_ca_dim=decoupled_ca_dim, decoupled_ca_weight=decoupled_ca_weight, init_scale=init_scale,
+        )
         self.norm3 = norm_layer(hidden_size, elementwise_affine=True, eps=1e-6)
 
         if skip_connection:
@@ -348,16 +293,10 @@ class HunYuanDiTBlock(nn.Module):
 
         self.use_moe = use_moe
         if self.use_moe:
-            print("using moe")
+            print("Using moe.")
             self.moe = MoEBlock(
-                hidden_size,
-                num_experts=num_experts,
-                moe_top_k=moe_top_k,
-                dropout=0.0,
-                activation_fn="gelu",
-                final_dropout=False,
-                ff_inner_dim=int(hidden_size * 4.0),
-                ff_bias=True,
+                hidden_size, num_experts=num_experts, moe_top_k=moe_top_k, dropout=0.0, activation_fn="gelu", final_dropout=False,
+                ff_inner_dim=int(hidden_size * 4.0), ff_bias=True,
             )
         else:
             self.mlp = MLP(width=hidden_size)
@@ -413,31 +352,16 @@ class AttentionPool(nn.Module):
             x = torch.cat([x.mean(dim=0, keepdim=True), x], dim=0)  # (L+1)NC
         x = x + self.positional_embedding[:, None, :].to(x.dtype)  # (L+1)NC
         x, _ = F.multi_head_attention_forward(
-            query=x[:1], key=x, value=x,
-            embed_dim_to_check=x.shape[-1],
-            num_heads=self.num_heads,
-            q_proj_weight=self.q_proj.weight,
-            k_proj_weight=self.k_proj.weight,
-            v_proj_weight=self.v_proj.weight,
-            in_proj_weight=None,
-            in_proj_bias=torch.cat([self.q_proj.bias, self.k_proj.bias, self.v_proj.bias]),
-            bias_k=None,
-            bias_v=None,
-            add_zero_attn=False,
-            dropout_p=0,
-            out_proj_weight=self.c_proj.weight,
-            out_proj_bias=self.c_proj.bias,
-            use_separate_proj_weight=True,
-            training=self.training,
-            need_weights=False
+            query=x[:1], key=x, value=x, embed_dim_to_check=x.shape[-1], num_heads=self.num_heads, q_proj_weight=self.q_proj.weight, k_proj_weight=self.k_proj.weight,
+            v_proj_weight=self.v_proj.weight, in_proj_weight=None, in_proj_bias=torch.cat([self.q_proj.bias, self.k_proj.bias, self.v_proj.bias]), bias_k=None,
+            bias_v=None, add_zero_attn=False, dropout_p=0, out_proj_weight=self.c_proj.weight, out_proj_bias=self.c_proj.bias, use_separate_proj_weight=True,
+            training=self.training, need_weights=False,
         )
         return x.squeeze(0)
 
 
 class FinalLayer(nn.Module):
-    """
-    The final layer of HunYuanDiT.
-    """
+    """The final layer of HunYuanDiT."""
 
     def __init__(self, final_hidden_size, out_channels):
         super().__init__()
@@ -455,29 +379,9 @@ class FinalLayer(nn.Module):
 class HunYuanDiTPlain(nn.Module):
 
     def __init__(
-        self,
-        input_size=1024,
-        in_channels=4,
-        hidden_size=1024,
-        context_dim=1024,
-        depth=24,
-        num_heads=16,
-        mlp_ratio=4.0,
-        norm_type='layer',
-        qk_norm_type='rms',
-        qk_norm=False,
-        text_len=257,
-        with_decoupled_ca=False,
-        additional_cond_hidden_state=768,
-        decoupled_ca_dim=16,
-        decoupled_ca_weight=1.0,
-        use_pos_emb=False,
-        use_attention_pooling=True,
-        guidance_cond_proj_dim=None,
-        qkv_bias=True,
-        num_moe_layers: int = 6,
-        num_experts: int = 8,
-        moe_top_k: int = 2,
+        self, input_size=1024, in_channels=4, hidden_size=1024, context_dim=1024, depth=24, num_heads=16, mlp_ratio=4.0, norm_type='layer', qk_norm_type='rms',
+        qk_norm=False, text_len=257, with_decoupled_ca=False, additional_cond_hidden_state=768, decoupled_ca_dim=16, decoupled_ca_weight=1.0, use_pos_emb=False,
+        use_attention_pooling=True, guidance_cond_proj_dim=None, qkv_bias=True, num_moe_layers: int = 6, num_experts: int = 8, moe_top_k: int = 2,
     ):
         super().__init__()
         self.input_size = input_size
@@ -529,23 +433,12 @@ class HunYuanDiTPlain(nn.Module):
 
         # HUnYuanDiT Blocks
         self.blocks = nn.ModuleList([
-            HunYuanDiTBlock(hidden_size=hidden_size,
-                            c_emb_size=hidden_size,
-                            num_heads=num_heads,
-                            mlp_ratio=mlp_ratio,
-                            text_states_dim=context_dim,
-                            qk_norm=qk_norm,
-                            norm_layer=self.norm,
-                            qk_norm_layer=self.qk_norm,
-                            skip_connection=layer > depth // 2,
-                            with_decoupled_ca=with_decoupled_ca,
-                            decoupled_ca_dim=decoupled_ca_dim,
-                            decoupled_ca_weight=decoupled_ca_weight,
-                            qkv_bias=qkv_bias,
-                            use_moe=True if depth - layer <= num_moe_layers else False,
-                            num_experts=num_experts,
-                            moe_top_k=moe_top_k
-                            )
+            HunYuanDiTBlock(
+                hidden_size=hidden_size, c_emb_size=hidden_size, num_heads=num_heads, mlp_ratio=mlp_ratio, text_states_dim=context_dim, qk_norm=qk_norm,
+                norm_layer=self.norm, qk_norm_layer=self.qk_norm, skip_connection=layer > depth // 2, with_decoupled_ca=with_decoupled_ca,
+                decoupled_ca_dim=decoupled_ca_dim, decoupled_ca_weight=decoupled_ca_weight, qkv_bias=qkv_bias,
+                use_moe=True if depth - layer <= num_moe_layers else False, num_experts=num_experts, moe_top_k=moe_top_k,
+            )
             for layer in range(depth)
         ])
         self.depth = depth

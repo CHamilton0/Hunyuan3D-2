@@ -419,7 +419,7 @@ std::vector<std::vector<torch::Tensor>> build_hierarchy(std::vector<torch::Tenso
         dptr = grid_oddcorners[i].data_ptr<int64_t>();
         for (int j = 0; j < grids[i].seq2oddcorner.size(); ++j) {
             dptr[j] = grids[i].seq2oddcorner[j];
-        }            
+        }
         if (i + 1 < grids.size()) {
             grid_downsamples[i] = torch::zeros({static_cast<int64_t>(grids[i].downsample_seq.size())}, int64_options);
             int64_t* dptr = grid_downsamples[i].data_ptr<int64_t>();

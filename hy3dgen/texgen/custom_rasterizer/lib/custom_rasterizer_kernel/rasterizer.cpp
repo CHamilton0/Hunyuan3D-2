@@ -27,7 +27,7 @@ void rasterizeTriangleCPU(int idx, float* vt0, float* vt1, float* vt2, int width
                 if (d) {
                     depth_thres = d[pixel] * 0.49999f + 0.5f + occlusion_truncation;
                 }
-                
+
                 int z_quantize = depth * (2<<17);
                 INT64 token = (INT64)z_quantize * MAXINT + (INT64)(idx + 1);
                 if (depth < depth_thres)

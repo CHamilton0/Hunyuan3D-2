@@ -20,7 +20,7 @@ import platform
 def get_platform_specific_args():
     system = platform.system().lower()
     cpp_std = 'c++14'  # Make configurable if needed
-    
+
     if sys.platform == 'win32':
         compile_args = ['/O2', f'/std:{cpp_std}', '/EHsc', '/MP', '/DWIN32_LEAN_AND_MEAN', '/bigobj']
         link_args = []
@@ -36,7 +36,7 @@ def get_platform_specific_args():
         extra_includes = []
     else:
         raise RuntimeError(f"Unsupported platform: {system}")
-    
+
     return compile_args, link_args, extra_includes
 
 extra_compile_args, extra_link_args, platform_includes = get_platform_specific_args()

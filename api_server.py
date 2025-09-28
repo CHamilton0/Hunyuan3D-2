@@ -12,11 +12,8 @@
 # fine-tuning enabling code and other elements of the foregoing made publicly available
 # by Tencent in accordance with TENCENT HUNYUAN COMMUNITY LICENSE AGREEMENT.
 
-"""
-A model worker executes the model.
-"""
+"""A model worker executes the model."""
 
-import argparse
 import asyncio
 import base64
 import logging
@@ -53,10 +50,7 @@ def build_logger(logger_name, logger_filename):
 
     global handler
 
-    formatter = logging.Formatter(
-        fmt="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    formatter = logging.Formatter(fmt="%(asctime)s | %(levelname)s | %(name)s | %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 
     # Set the format of root handlers
     if not logging.getLogger().handlers:
@@ -149,17 +143,9 @@ class ModelWorker:
         logger.info(f"Loading the model {model_path} on worker {worker_id} ...")
 
         self.rembg = BackgroundRemover()
-        self.pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
-            model_path,
-            subfolder=subfolder,
-            use_safetensors=True,
-            device=device,
-        )
-        #self.pipeline.enable_flashvdm(mc_algo='mc')
-        # self.pipeline_t2i = HunyuanDiTPipeline(
-        #     "Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled",
-        #     device=device,
-        # )
+        self.pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(model_path, subfolder=subfolder, use_safetensors=True, device=device)
+        self.pipeline.enable_flashvdm(mc_algo='mc')
+        # self.pipeline_t2i = HunyuanDiTPipeline("Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled", device=device)
 
         if enable_tex:
             self.pipeline_tex = Hunyuan3DPaintPipeline.from_pretrained(tex_model_path)
@@ -171,10 +157,7 @@ class ModelWorker:
             return args.limit_model_concurrency - model_semaphore._value + (len(model_semaphore._waiters) if model_semaphore._waiters is not None else 0)
 
     def get_status(self):
-        return {
-            'speed': 1,
-            'queue_length': self.get_queue_length(),
-        }
+        return {'speed': 1, 'queue_length': self.get_queue_length()}
 
     @torch.inference_mode()
     def generate(self, uid, params):
@@ -235,12 +218,8 @@ app.add_middleware(
     allow_headers=["*"],        # Allow all headers (允许所有头部)
 )
 
-@app.get("/")
-async def read_root():
-    return {"Hello": "World"}
 
-
-@app.post("/generate/")
+@app.post("/generate")
 async def generate(request: Request):
 
     logger.info("Worker generating...")
@@ -253,47 +232,49 @@ async def generate(request: Request):
     except ValueError as e:
         traceback.print_exc()
         print("Caught ValueError:", e)
-        ret = {"text": server_error_msg, "error_code": 1}
+        ret = {'text': server_error_msg, 'error_code': 1}
         return JSONResponse(ret, status_code=404)
     except torch.cuda.CudaError as e:
         print("Caught torch.cuda.CudaError:", e)
-        ret = {"text": server_error_msg, "error_code": 1}
+        ret = {'text': server_error_msg, 'error_code': 1}
         return JSONResponse(ret, status_code=404)
     except Exception as e:
         traceback.print_exc()
-        print("Caught Unknown Error", e)
-        ret = {"text": server_error_msg, "error_code": 1}
+        print("Caught Unknown Error:", e)
+        ret = {'text': server_error_msg, 'error_code': 1}
         return JSONResponse(ret, status_code=404)
 
 
-@app.post("/send/")
+@app.post("/send")
 async def generate(request: Request):
 
     logger.info("Worker send...")
     params = await request.json()
     uid = uuid.uuid4()
     threading.Thread(target=worker.generate, args=(uid, params,)).start()
-    ret = {"uid": str(uid)}
+    ret = {'uid': str(uid)}
 
     return JSONResponse(ret, status_code=200)
 
 
-@app.get("/status/{uid}/")
+@app.get("/status/{uid}")
 async def status(uid: str):
 
     save_file_path = os.path.join(SAVE_DIR, f"{uid}.glb")
     print(save_file_path, os.path.exists(save_file_path))
 
     if not os.path.exists(save_file_path):
-        response = {"status": "processing"}
+        response = {'status': 'processing'}
     else:
-        base64_str = base64.b64encode(open(save_file_path, "rb").read()).decode()
-        response = {"status": "completed", "model_base64": base64_str}
+        base64_str = base64.b64encode(open(save_file_path, 'rb').read()).decode()
+        response = {'status': 'completed', 'model_base64': base64_str}
 
     return JSONResponse(response, status_code=200)
 
 
 if __name__ == "__main__":
+
+    import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--host', type=str, default="127.0.0.1")

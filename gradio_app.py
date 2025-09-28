@@ -147,7 +147,6 @@ def _gen_shape(
         raise gr.Error("Please provide either a caption or an image.")
 
     if MV_MODE:
-
         if mv_image_front is None and mv_image_back is None and mv_image_left is None and mv_image_right is None:
             raise gr.Error("Please provide at least one view image.")
         image = {}
@@ -165,7 +164,7 @@ def _gen_shape(
     octree_resolution = int(octree_resolution)
 
     if caption:
-        print("Prompt is", caption)
+        print("Prompt is:", caption)
 
     save_folder = gen_save_folder()
     stats = {
@@ -190,7 +189,7 @@ def _gen_shape(
         try:
             image = t2i_worker(caption)
         except Exception as e:
-            raise gr.Error(f"Text to 3D is disable. Please enable it by `python gradio_app.py --enable-t23d`.")
+            raise gr.Error("Text to 3D is disabled. Please enable it by `python gradio_app.py --enable-t23d`")
         time_meta['text2image'] = time.time() - start_time
 
     # Remove disk io to make responding faster, uncomment at your will.
@@ -217,13 +216,8 @@ def _gen_shape(
     generator = torch.Generator()
     generator = generator.manual_seed(int(seed))
     outputs = i23d_worker(
-        image=image,
-        num_inference_steps=steps,
-        guidance_scale=guidance_scale,
-        generator=generator,
-        octree_resolution=octree_resolution,
-        num_chunks=num_chunks,
-        output_type='mesh',
+        image=image, num_inference_steps=steps, guidance_scale=guidance_scale, generator=generator,
+        octree_resolution=octree_resolution, num_chunks=num_chunks, output_type='mesh',
     )
     time_meta['shape generation'] = time.time() - start_time
     logger.info("--- Shape generation takes %s seconds ---" % (time.time() - start_time))
@@ -237,7 +231,7 @@ def _gen_shape(
 
     stats['time'] = time_meta
     main_image = image if not MV_MODE else image['front']
-    
+
     return mesh, main_image, save_folder, stats, seed
 
 
@@ -248,18 +242,8 @@ def generation_all(
 
     start_time_0 = time.time()
     mesh, image, save_folder, stats, seed = _gen_shape(
-        caption=caption,
-        image=image,
-        mv_image_front=mv_image_front,
-        mv_image_back=mv_image_back,
-        mv_image_left=mv_image_left,
-        mv_image_right=mv_image_right,
-        steps=steps,
-        guidance_scale=guidance_scale,
-        seed=seed,
-        octree_resolution=octree_resolution,
-        check_box_rembg=check_box_rembg,
-        num_chunks=num_chunks,
+        caption=caption, image=image, mv_image_front=mv_image_front, mv_image_back=mv_image_back, mv_image_left=mv_image_left, mv_image_right=mv_image_right,
+        steps=steps, guidance_scale=guidance_scale, seed=seed, octree_resolution=octree_resolution, check_box_rembg=check_box_rembg, num_chunks=num_chunks,
         randomize_seed=randomize_seed,
     )
     path = export_mesh(mesh, save_folder, textured=False)
@@ -298,18 +282,8 @@ def shape_generation(
 
     start_time_0 = time.time()
     mesh, image, save_folder, stats, seed = _gen_shape(
-        caption=caption,
-        image=image,
-        mv_image_front=mv_image_front,
-        mv_image_back=mv_image_back,
-        mv_image_left=mv_image_left,
-        mv_image_right=mv_image_right,
-        steps=steps,
-        guidance_scale=guidance_scale,
-        seed=seed,
-        octree_resolution=octree_resolution,
-        check_box_rembg=check_box_rembg,
-        num_chunks=num_chunks,
+        caption=caption, image=image, mv_image_front=mv_image_front, mv_image_back=mv_image_back, mv_image_left=mv_image_left, mv_image_right=mv_image_right,
+        steps=steps, guidance_scale=guidance_scale, seed=seed, octree_resolution=octree_resolution, check_box_rembg=check_box_rembg, num_chunks=num_chunks,
         randomize_seed=randomize_seed,
     )
     stats['time']['total'] = time.time() - start_time_0
@@ -333,7 +307,7 @@ def build_app():
     if 'mini' in args.subfolder:
         title = "Hunyuan3D-2mini: Strong 0.6B Image to Shape Generator"
     if TURBO_MODE:
-        title = title.replace(":", "-Turbo: Fast ")
+        title = title.replace(":", "-Turbo: Fast")
 
     title_html = f"""
     <div style="font-size: 2em; font-weight: bold; text-align: center; margin-bottom: 5px">
@@ -351,20 +325,14 @@ def build_app():
     </div>
     """
     custom_css = """
-    .app.svelte-wpkpf6.svelte-wpkpf6:not(.fill_width) {
-        max-width: 1480px;
-    }
-    .mv-image button .wrap {
-        font-size: 10px;
-    }
-    .mv-image .icon-wrap {
-        width: 20px;
-    }
+    .app.svelte-wpkpf6.svelte-wpkpf6:not(.fill_width) {max-width: 1480px;}
+    .mv-image button .wrap {font-size: 10px;}
+    .mv-image .icon-wrap {width: 20px;}
     """
 
     with gr.Blocks(theme=themes.Base(), title="Hunyuan-3D-2.0", analytics_enabled=False, css=custom_css) as demo:
         gr.HTML(title_html)
-        
+
         with gr.Row():
 
             with gr.Column(scale=3):
@@ -452,12 +420,12 @@ def build_app():
             </div>
             """
         )
-        
+
         if not HAS_TEXTUREGEN:
             gr.HTML(
                 """
                 <div style="margin-top: 5px;" align="center">
-                    <b>Warning: </b>Texture synthesis is disable due to missing requirements, please install requirements following 
+                    <b>Warning: </b>Texture synthesis is disabled due to missing requirements, please install requirements following 
                     <a href="https://github.com/Tencent/Hunyuan3D-2?tab=readme-ov-file#install-requirements">README.md</a> to activate it.
                 </div>
                 """
@@ -467,7 +435,7 @@ def build_app():
             gr.HTML(
                 """
                 <div style="margin-top: 5px;" align="center">
-                    <b>Warning: </b>Text to 3D is disable. To activate it, please run `python gradio_app.py --enable-t23d`.
+                    <b>Warning: </b>Text to 3D is disabled. To activate it, please run `python gradio_app.py --enable-t23d`.
                 </div>
                 """
             )
@@ -480,8 +448,8 @@ def build_app():
         btn.click(
             shape_generation,
             inputs=[
-                caption, image, mv_image_front, mv_image_back, mv_image_left, mv_image_right, num_steps,
-                cfg_scale, seed, octree_resolution, check_box_rembg, num_chunks, randomize_seed,
+                caption, image, mv_image_front, mv_image_back, mv_image_left, mv_image_right, num_steps, cfg_scale,
+                seed, octree_resolution, check_box_rembg, num_chunks, randomize_seed,
             ],
             outputs=[file_out, html_gen_mesh, stats, seed],
         ).then(
@@ -495,8 +463,8 @@ def build_app():
         btn_all.click(
             generation_all,
             inputs=[
-                caption, image, mv_image_front, mv_image_back, mv_image_left, mv_image_right, num_steps,
-                cfg_scale, seed, octree_resolution, check_box_rembg, num_chunks, randomize_seed,
+                caption, image, mv_image_front, mv_image_back, mv_image_left, mv_image_right, num_steps, cfg_scale,
+                seed, octree_resolution, check_box_rembg, num_chunks, randomize_seed,
             ],
             outputs=[file_out, file_out2, html_gen_mesh, stats, seed],
         ).then(
@@ -665,9 +633,9 @@ if __name__ == '__main__':
     face_reduce_worker = FaceReducer()
 
     # https://discuss.huggingface.co/t/how-to-serve-an-html-file/33921/2
-    # create a FastAPI app
+    # Create a FastAPI app
     app = FastAPI()
-    # create a static directory to store the static files
+    # Create a static directory to store the static files
     static_dir = Path(SAVE_DIR).absolute()
     static_dir.mkdir(parents=True, exist_ok=True)
     app.mount("/static", StaticFiles(directory=static_dir, html=True), name="static")

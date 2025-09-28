@@ -17,10 +17,6 @@ setup(
     name='custom_rasterizer',
     include_package_data=True,
     package_dir={'': '.'},
-    ext_modules=[
-        custom_rasterizer_module,
-    ],
-    cmdclass={
-        'build_ext': BuildExtension
-    }
+    ext_modules=[custom_rasterizer_module],
+    cmdclass={'build_ext': BuildExtension}
 )

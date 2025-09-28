@@ -19,9 +19,6 @@ from functools import wraps
 import torch
 
 
-#os.environ['HF_HUB_ENABLE_HF_TRANSFER'] = '1'
-
-
 def get_logger(name):
 
     logger = logging.getLogger(name)
@@ -42,9 +39,7 @@ logger = get_logger('hy3dgen.shapegen')
 
 class synchronize_timer:
     """
-    Synchronized timer to count the inference time of `nn.Module.forward`.
-
-    Supports both context manager and decorator usage.
+    Synchronized timer to count the inference time of `nn.Module.forward`. Supports both context manager and decorator usage.
 
     Example as context manager:
     ```python
@@ -82,13 +77,11 @@ class synchronize_timer:
 
     def __call__(self, func):
         """Decorator: wrap the function to time its execution."""
-
         @wraps(func)
         def wrapper(*args, **kwargs):
             with self:
                 result = func(*args, **kwargs)
             return result
-
         return wrapper
 
 
@@ -115,7 +108,7 @@ def smart_load_model(model_path, subfolder, use_safetensors, variant):
 
     logger.info(f"Try to load model from local path: {model_path}")
     if not os.path.exists(os.path.join(model_path, ckpt_name)):
-        logger.info("Model path does not exist, try to download from huggingface")
+        logger.info("Model path does not exist, try to download from huggingface.")
         try:
             from huggingface_hub import snapshot_download
             # Download only specified subdirectory (只下载指定子目录)
@@ -125,12 +118,12 @@ def smart_load_model(model_path, subfolder, use_safetensors, variant):
             model_path = os.path.join(path, subfolder)
         except ImportError:
             logger.warning("You need to install HuggingFace Hub to load models from the hub.")
-            raise RuntimeError(f"Model path {model_path} not found")
+            raise RuntimeError(f"Model path {model_path} not found.")
         except Exception as e:
             raise e
 
     if not os.path.exists(model_path):
-        raise FileNotFoundError(f"Model path {original_model_path} not found")
+        raise FileNotFoundError(f"Model path {original_model_path} not found.")
 
     config_path = os.path.join(model_path, config_name)
     ckpt_path = os.path.join(model_path, ckpt_name)

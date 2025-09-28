@@ -17,9 +17,7 @@ import random
 
 import numpy as np
 import torch
-from typing import List
-from diffusers import DiffusionPipeline
-from diffusers import EulerAncestralDiscreteScheduler, LCMScheduler
+from diffusers import DiffusionPipeline, EulerAncestralDiscreteScheduler, LCMScheduler
 
 
 class Multiview_Diffusion_Net():
@@ -32,15 +30,13 @@ class Multiview_Diffusion_Net():
         custom_pipeline_path = os.path.join(os.path.dirname(current_file_path), '..', 'hunyuanpaint')
 
         pipeline = DiffusionPipeline.from_pretrained(
-            multiview_ckpt_path,
-            custom_pipeline=custom_pipeline_path, torch_dtype=torch.float16)
+            multiview_ckpt_path, custom_pipeline=custom_pipeline_path, torch_dtype=torch.float16,
+        )
 
         if config.pipe_name in ['hunyuanpaint']:
-            pipeline.scheduler = EulerAncestralDiscreteScheduler.from_config(pipeline.scheduler.config,
-                                                                             timestep_spacing='trailing')
+            pipeline.scheduler = EulerAncestralDiscreteScheduler.from_config(pipeline.scheduler.config, timestep_spacing='trailing')
         elif config.pipe_name in ['hunyuanpaint-turbo']:
-            pipeline.scheduler = LCMScheduler.from_config(pipeline.scheduler.config,
-                                                        timestep_spacing='trailing')
+            pipeline.scheduler = LCMScheduler.from_config(pipeline.scheduler.config, timestep_spacing='trailing')
             pipeline.set_turbo(True)
             # pipeline.prepare() 
 
@@ -57,7 +53,7 @@ class Multiview_Diffusion_Net():
 
         self.seed_everything(0)
 
-        if not isinstance(input_images, List):
+        if not isinstance(input_images, list):
             input_images = [input_images]
 
         input_images = [input_image.resize((self.view_size, self.view_size)) for input_image in input_images]

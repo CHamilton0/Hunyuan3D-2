@@ -93,7 +93,7 @@ vtx_pos_ptr[vtx_idx * 3 + 1], vtx_pos_ptr[vtx_idx * 3 + 2]};
             } else {
                 uncolored_vtx_count++;
             }
-            
+
         }
 
         if(last_uncolored_vtx_count==uncolored_vtx_count){
