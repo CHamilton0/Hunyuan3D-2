@@ -26,5 +26,3 @@ mesh = pipeline(image="assets/demo.png")[0]
 pipeline = Hunyuan3DPaintPipeline.from_pretrained("tencent/Hunyuan3D-2")
 mesh = pipeline(mesh, image="assets/demo.png")
 ```
-
-Please visit [examples](examples) folder for more advanced usage, such as **multiview image to 3D generation** and **texture generation for handcrafted mesh**.

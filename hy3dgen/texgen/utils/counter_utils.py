@@ -14,7 +14,7 @@
 
 
 class RunningStats():
-    def __init__(self) -> None:
+    def __init__(self):
         self.count = 0
         self.sum = 0
         self.mean = 0

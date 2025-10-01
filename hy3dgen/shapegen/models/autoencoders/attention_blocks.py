@@ -73,7 +73,7 @@ class FourierEmbedder(nn.Module):
         The embedding size, if `include_input` is True, it is `input_dim * (num_freqs * 2 + 1)`, otherwise, it is `input_dim * num_freqs * 2`.
     """
 
-    def __init__(self, num_freqs: int = 6, logspace: bool = True, input_dim: int = 3, include_input: bool = True, include_pi: bool = True) -> None:
+    def __init__(self, num_freqs=6, logspace=True, input_dim=3, include_input=True, include_pi=True):
         """The initialization."""
 
         super().__init__()
@@ -97,7 +97,7 @@ class FourierEmbedder(nn.Module):
         out_dim = input_dim * (self.num_freqs * 2 + temp)
         return out_dim
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor):
         """
         Forward process.
 
@@ -125,7 +125,7 @@ class FourierEmbedder(nn.Module):
 class DropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
 
-    def __init__(self, drop_prob: float = 0., scale_by_keep: bool = True):
+    def __init__(self, drop_prob=0.0, scale_by_keep=True):
         super(DropPath, self).__init__()
         self.drop_prob = drop_prob
         self.scale_by_keep = scale_by_keep
@@ -153,7 +153,7 @@ class DropPath(nn.Module):
 
 
 class MLP(nn.Module):
-    def __init__(self, *, width: int, expand_ratio: int = 4, output_width: int | None = None, drop_path_rate: float = 0.0):
+    def __init__(self, *, width: int, expand_ratio=4, output_width: int = None, drop_path_rate=0.0):
         super().__init__()
         self.width = width
         self.c_fc = nn.Linear(width, width * expand_ratio)
@@ -166,7 +166,7 @@ class MLP(nn.Module):
 
 
 class QKVMultiheadCrossAttention(nn.Module):
-    def __init__(self, *, heads: int, n_data: int | None = None, width=None, qk_norm=False, norm_layer=nn.LayerNorm):
+    def __init__(self, *, heads: int, n_data: int = None, width=None, qk_norm=False, norm_layer=nn.LayerNorm):
         super().__init__()
         self.heads = heads
         self.n_data = n_data
@@ -185,7 +185,7 @@ class QKVMultiheadCrossAttention(nn.Module):
 
         q = self.q_norm(q)
         k = self.k_norm(k)
-        q, k, v = map(lambda t: rearrange(t, 'b n h d -> b h n d', h=self.heads), (q, k, v))
+        q, k, v = map(lambda t: rearrange(t, "b n h d -> b h n d", h=self.heads), (q, k, v))
         out = self.attn_processor(self, q, k, v)
         out = out.transpose(1, 2).reshape(bs, n_ctx, -1)
         return out
@@ -193,8 +193,7 @@ class QKVMultiheadCrossAttention(nn.Module):
 
 class MultiheadCrossAttention(nn.Module):
     def __init__(
-        self, *, width: int, heads: int, qkv_bias: bool = True, n_data: int | None = None, data_width: int | None = None, norm_layer=nn.LayerNorm,
-        qk_norm: bool = False, kv_cache: bool = False,
+        self, *, width: int, heads: int, qkv_bias=True, n_data: int = None, data_width: int = None, norm_layer=nn.LayerNorm, qk_norm=False, kv_cache=False,
     ):
         super().__init__()
         self.n_data = n_data
@@ -224,8 +223,7 @@ class MultiheadCrossAttention(nn.Module):
 
 class ResidualCrossAttentionBlock(nn.Module):
     def __init__(
-        self, *, n_data: int | None = None, width: int, heads: int, mlp_expand_ratio: int = 4, data_width: int | None = None, qkv_bias: bool = True,
-        norm_layer=nn.LayerNorm, qk_norm: bool = False,
+        self, *, n_data: int = None, width: int, heads: int, mlp_expand_ratio=4, data_width: int = None, qkv_bias=True, norm_layer=nn.LayerNorm, qk_norm=False,
     ):
         super().__init__()
 
@@ -263,13 +261,13 @@ class QKVMultiheadAttention(nn.Module):
         q = self.q_norm(q)
         k = self.k_norm(k)
 
-        q, k, v = map(lambda t: rearrange(t, 'b n h d -> b h n d', h=self.heads), (q, k, v))
+        q, k, v = map(lambda t: rearrange(t, "b n h d -> b h n d", h=self.heads), (q, k, v))
         out = scaled_dot_product_attention(q, k, v).transpose(1, 2).reshape(bs, n_ctx, -1)
         return out
 
 
 class MultiheadAttention(nn.Module):
-    def __init__(self, *, n_ctx: int, width: int, heads: int, qkv_bias: bool, norm_layer=nn.LayerNorm, qk_norm: bool = False, drop_path_rate: float = 0.0):
+    def __init__(self, *, n_ctx: int, width: int, heads: int, qkv_bias: bool, norm_layer=nn.LayerNorm, qk_norm=False, drop_path_rate=0.0):
         super().__init__()
         self.n_ctx = n_ctx
         self.width = width
@@ -287,9 +285,7 @@ class MultiheadAttention(nn.Module):
 
 
 class ResidualAttentionBlock(nn.Module):
-    def __init__(
-        self, *, n_ctx: int, width: int, heads: int, qkv_bias: bool = True, norm_layer=nn.LayerNorm, qk_norm: bool = False, drop_path_rate: float = 0.0,
-    ):
+    def __init__(self, *, n_ctx: int, width: int, heads: int, qkv_bias=True, norm_layer=nn.LayerNorm, qk_norm=False, drop_path_rate=0.0):
         super().__init__()
         self.attn = MultiheadAttention(
             n_ctx=n_ctx, width=width, heads=heads, qkv_bias=qkv_bias, norm_layer=norm_layer, qk_norm=qk_norm, drop_path_rate=drop_path_rate,
@@ -305,9 +301,7 @@ class ResidualAttentionBlock(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(
-        self, *, n_ctx: int, width: int, layers: int, heads: int, qkv_bias: bool = True, norm_layer=nn.LayerNorm, qk_norm: bool = False, drop_path_rate: float = 0.0,
-    ):
+    def __init__(self, *, n_ctx: int, width: int, layers: int, heads: int, qkv_bias=True, norm_layer=nn.LayerNorm, qk_norm=False, drop_path_rate=0.0):
         super().__init__()
         self.n_ctx = n_ctx
         self.width = width
@@ -330,8 +324,8 @@ class Transformer(nn.Module):
 class CrossAttentionDecoder(nn.Module):
 
     def __init__(
-        self, *, num_latents: int, out_channels: int, fourier_embedder: FourierEmbedder, width: int, heads: int, mlp_expand_ratio: int = 4, downsample_ratio: int = 1,
-        enable_ln_post: bool = True, qkv_bias: bool = True, qk_norm: bool = False, label_type: str = "binary",
+        self, *, num_latents: int, out_channels: int, fourier_embedder: FourierEmbedder, width: int, heads: int, mlp_expand_ratio=4, downsample_ratio=1,
+        enable_ln_post=True, qkv_bias=True, qk_norm=False, label_type='binary',
     ):
         super().__init__()
 
@@ -373,8 +367,7 @@ class CrossAttentionDecoder(nn.Module):
 
 
 def fps(
-    src: torch.Tensor, batch: torch.Tensor | None = None, ratio: torch.Tensor | float | None = None, random_start: bool = True, batch_size: int | None = None,
-    ptr: torch.Tensor | list[int] | None = None,
+    src: torch.Tensor, batch: torch.Tensor = None, ratio: torch.Tensor | float = None, random_start=True, batch_size: int = None, ptr: torch.Tensor | list[int] = None,
 ):
     src = src.float()
     from torch_cluster import fps as fps_fn
@@ -386,7 +379,7 @@ class PointCrossAttentionEncoder(nn.Module):
 
     def __init__(
         self, *, num_latents: int, downsample_ratio: float, pc_size: int, pc_sharpedge_size: int, fourier_embedder: FourierEmbedder, point_feats: int, width: int,
-        heads: int, layers: int, normal_pe: bool = False, qkv_bias: bool = True, use_ln_post: bool = False, use_checkpoint: bool = False, qk_norm: bool = False,
+        heads: int, layers: int, normal_pe=False, qkv_bias=True, use_ln_post=False, use_checkpoint=False, qk_norm=False,
     ):
 
         super().__init__()
@@ -419,7 +412,7 @@ class PointCrossAttentionEncoder(nn.Module):
         else:
             self.ln_post = None
 
-    def sample_points_and_latents(self, pc: torch.FloatTensor, feats: torch.FloatTensor | None = None):
+    def sample_points_and_latents(self, pc: torch.FloatTensor, feats: torch.FloatTensor = None):
         B, N, D = pc.shape
         num_pts = self.num_latents * self.downsample_ratio
 
@@ -508,7 +501,7 @@ class PointCrossAttentionEncoder(nn.Module):
             [query_pc, input_pc, query_random_pc, input_random_pc, query_sharpedge_pc, input_sharpedge_pc],
         )
 
-    def forward(self, pc: torch.FloatTensor, feats: torch.FloatTensor | None = None):
+    def forward(self, pc: torch.FloatTensor, feats: torch.FloatTensor = None):
         """
         Parameters
         ----------

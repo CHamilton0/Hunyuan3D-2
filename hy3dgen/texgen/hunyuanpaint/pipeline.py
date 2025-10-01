@@ -30,7 +30,7 @@ from transformers import CLIPImageProcessor, CLIPTextModel, CLIPTokenizer
 
 from .unet.modules import UNet2p5DConditionModel, compute_multi_resolution_mask, compute_multi_resolution_discrete_voxel_indice
 
-def guidance_scale_embedding(w, embedding_dim: int = 512, dtype: torch.dtype = torch.float32):
+def guidance_scale_embedding(w, embedding_dim=512, dtype=torch.float32):
     """
     See https://github.com/google-research/vdm/blob/dc27b98a554f65cdc654b800da5aa1846545d41b/model_vdm.py#L298
 
@@ -146,7 +146,7 @@ class DDIMSolver:
 
 
 @torch.no_grad()
-def update_ema(target_params, source_params, rate: float = 0.99):
+def update_ema(target_params, source_params, rate=0.99):
     """
     Update target parameters to be closer to those of source parameters using an exponential moving average.
 
@@ -215,9 +215,8 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
 
     @torch.no_grad()
     def __call__(
-        self, image: Image.Image | None = None, prompt: str | None = None, negative_prompt: str = "watermark, ugly, deformed, noisy, blurry, low contrast", *args,
-        num_images_per_prompt: int = 1, guidance_scale: float = 2.0, output_type: str = 'pil', width: int = 512, height: int = 512, num_inference_steps: int = 28,
-        return_dict: bool = True, **cached_condition,
+        self, image: Image.Image = None, prompt: str = None, negative_prompt="watermark, ugly, deformed, noisy, blurry, low contrast", *args, num_images_per_prompt=1,
+        guidance_scale=2.0, output_type='pil', width=512, height=512, num_inference_steps=28, return_dict=True, **cached_condition,
     ):
         device = self._execution_device
 
@@ -315,12 +314,12 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
         prompt_embeds = self.unet.learned_text_clip_gen.repeat(num_images_per_prompt, 1, 1)
         negative_prompt_embeds = torch.zeros_like(prompt_embeds)
 
-        latents: torch.Tensor = self.denoise(
+        latents = self.denoise(
             prompt=None, *args, cross_attention_kwargs=None, guidance_scale=guidance_scale, num_images_per_prompt=num_images_per_prompt, prompt_embeds=prompt_embeds,
             negative_prompt_embeds=negative_prompt_embeds, num_inference_steps=num_inference_steps, output_type='latent', width=width, height=height, **cached_condition,
         ).images
 
-        if not output_type == "latent":
+        if not output_type == 'latent':
             image = self.vae.decode(latents / self.vae.config.scaling_factor, return_dict=False)[0]
         else:
             image = latents
@@ -332,13 +331,11 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
         return ImagePipelineOutput(images=image)
 
     def denoise(
-        self, prompt: str | list[str] | None = None, height: int | None = None, width: int | None = None, num_inference_steps: int = 50,
-        timesteps: list[int] | None = None, sigmas: list[float] | None = None, guidance_scale: float = 7.5, negative_prompt: str | list[str] | None = None,
-        num_images_per_prompt: int = 1, eta: float = 0.0, generator: torch.Generator | list[torch.Generator] | None = None, latents: torch.Tensor | None = None,
-        prompt_embeds: torch.Tensor | None = None, negative_prompt_embeds: torch.Tensor | None = None, ip_adapter_image: PipelineImageInput | None = None,
-        ip_adapter_image_embeds: list[torch.Tensor] | None = None, output_type: str = 'pil', return_dict: bool = True,
-        cross_attention_kwargs: dict[str, Any] | None = None, guidance_rescale: float = 0.0, clip_skip: int | None = None,
-        callback_on_step_end: Callable[[int, int, dict], None] | PipelineCallback | MultiPipelineCallbacks | None = None,
+        self, prompt: str | list[str] = None, height: int = None, width: int = None, num_inference_steps=50, timesteps: list[int] = None, sigmas: list[float] = None,
+        guidance_scale=7.5, negative_prompt: str | list[str] = None, num_images_per_prompt=1, eta=0.0, generator: torch.Generator | list[torch.Generator] = None,
+        latents: torch.Tensor = None, prompt_embeds: torch.Tensor = None, negative_prompt_embeds: torch.Tensor = None, ip_adapter_image: PipelineImageInput = None,
+        ip_adapter_image_embeds: list[torch.Tensor] = None, output_type='pil', return_dict=True, cross_attention_kwargs: dict[str, Any] = None, guidance_rescale=0.0,
+        clip_skip=None, callback_on_step_end: Callable[[int, int, dict], None] | PipelineCallback | MultiPipelineCallbacks = None,
         callback_on_step_end_tensor_inputs: list[str] = ['latents'], **kwargs,
     ):
         """

@@ -1,0 +1,36 @@
+{
+    "project": {
+        "root": "Hunyuan3D-2",
+        "script": "generate.py",
+        "script_args": "--img assets/test_images/horse0.png --output-dir results --config-file gen_config.json"
+    },
+    "api": {
+        "host": "127.0.0.1",
+        "port": 8080,
+        "limit_model_concurrency": 5
+    },
+    "data": {
+        "img_dir": "assets/test_images",
+        "outpur_dir": "results",
+        "output_file_type": "glb"
+    },
+    "mesh": {
+        "max_facenum": 20000
+    },
+    "model": {
+        "model_path": "tencent/Hunyuan3D-2mini",
+        "subfolder": "hunyuan3d-dit-v2-mini",
+        "use_safetensors": "True",
+        "variant": "fp16",
+        "device": "cuda",
+        "enable_flashvdm": "False"
+    },
+    "params": {
+        "guidance_scale": 5.0,
+        "num_chunks": 10000,
+        "num_inference_steps": 100,
+        "octree_resolution": 256,
+        "output_type": "trimesh",
+        "seed": 42
+    }
+}

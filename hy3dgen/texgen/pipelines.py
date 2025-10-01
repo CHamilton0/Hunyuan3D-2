@@ -21,7 +21,7 @@ from PIL import Image
 
 from .differentiable_renderer.mesh_render import MeshRender
 from .utils.dehighlight_utils import Light_Shadow_Remover
-from .utils.imagesuper_utils import Image_Super_Net
+#from .utils.imagesuper_utils import Image_Super_Net
 from .utils.multiview_utils import Multiview_Diffusion_Net
 from .utils.uv_warp_utils import mesh_uv_wrap
 
@@ -44,29 +44,33 @@ class Hunyuan3DTexGenConfig:
         self.bake_exp = 4
         self.merge_method = 'fast'
 
-        self.pipe_dict = {'hunyuan3d-paint-v2-0': 'hunyuanpaint', 'hunyuan3d-paint-v2-0-turbo': 'hunyuanpaint-turbo'}
+        self.pipe_dict = {"hunyuan3d-paint-v2-0": "hunyuanpaint", "hunyuan3d-paint-v2-0-turbo": "hunyuanpaint-turbo"}
         self.pipe_name = self.pipe_dict[subfolder_name]
 
 
 class Hunyuan3DPaintPipeline:
     @classmethod
-    def from_pretrained(cls, model_path, subfolder='hunyuan3d-paint-v2-0-turbo'):
+    def from_pretrained(cls, model_path, subfolder="hunyuan3d-paint-v2-0-turbo"):
         original_model_path = model_path
         if not os.path.exists(model_path):
             # try local path
-            base_dir = os.environ.get('HY3DGEN_MODELS', '~/.cache/hy3dgen')
-            model_path = os.path.expanduser(os.path.join(base_dir, model_path))
+            base_dir = os.environ.get('HY3DGEN_MODELS', os.path.expanduser(os.path.join("~", ".cache", "hy3dgen")))
+            model_path = os.path.join(base_dir, *os.path.split(model_path))
 
-            delight_model_path = os.path.join(model_path, 'hunyuan3d-delight-v2-0')
+            delight_model_path = os.path.join(model_path, "hunyuan3d-delight-v2-0")
             multiview_model_path = os.path.join(model_path, subfolder)
 
             if not os.path.exists(delight_model_path) or not os.path.exists(multiview_model_path):
                 try:
                     import huggingface_hub
                     # download from huggingface
-                    model_path = huggingface_hub.snapshot_download(repo_id=original_model_path, allow_patterns=["hunyuan3d-delight-v2-0/*"])
-                    model_path = huggingface_hub.snapshot_download(repo_id=original_model_path, allow_patterns=[f'{subfolder}/*'])
-                    delight_model_path = os.path.join(model_path, 'hunyuan3d-delight-v2-0')
+                    model_path = huggingface_hub.snapshot_download(
+                        repo_id=original_model_path, local_dir=model_path, allow_patterns=["hunyuan3d-delight-v2-0/*"],
+                    )
+                    model_path = huggingface_hub.snapshot_download(
+                        repo_id=original_model_path, local_dir=model_path, allow_patterns=[f"{subfolder}/*"],
+                    )
+                    delight_model_path = os.path.join(model_path, "hunyuan3d-delight-v2-0")
                     multiview_model_path = os.path.join(model_path, subfolder)
                     return cls(Hunyuan3DTexGenConfig(delight_model_path, multiview_model_path, subfolder))
                 except Exception:
@@ -76,7 +80,7 @@ class Hunyuan3DPaintPipeline:
             else:
                 return cls(Hunyuan3DTexGenConfig(delight_model_path, multiview_model_path, subfolder))
         else:
-            delight_model_path = os.path.join(model_path, 'hunyuan3d-delight-v2-0')
+            delight_model_path = os.path.join(model_path, "hunyuan3d-delight-v2-0")
             multiview_model_path = os.path.join(model_path, subfolder)
             return cls(Hunyuan3DTexGenConfig(delight_model_path, multiview_model_path, subfolder))
 
@@ -87,14 +91,14 @@ class Hunyuan3DPaintPipeline:
         self.load_models()
 
     def load_models(self):
-        # empty cude cache
+        # empty cuda cache
         torch.cuda.empty_cache()
         # Load model
         self.models['delight_model'] = Light_Shadow_Remover(self.config)
         self.models['multiview_model'] = Multiview_Diffusion_Net(self.config)
         # self.models['super_model'] = Image_Super_Net(self.config)
 
-    def enable_model_cpu_offload(self, gpu_id: int | None = None, device: torch.device | str = "cuda"):
+    def enable_model_cpu_offload(self, gpu_id: int = None, device: torch.types.Device = 'cuda'):
         self.models['delight_model'].pipeline.enable_model_cpu_offload(gpu_id=gpu_id, device=device)
         self.models['multiview_model'].pipeline.enable_model_cpu_offload(gpu_id=gpu_id, device=device)
 
@@ -127,7 +131,7 @@ class Hunyuan3DPaintPipeline:
         if method == 'fast':
             texture, ori_trust_map = self.render.fast_bake_texture(project_textures, project_weighted_cos_maps)
         else:
-            raise Exception(f"no method {method}")
+            raise Exception(f"No method {method}")
         return texture, ori_trust_map > 1E-8
 
     def texture_inpaint(self, texture, mask):

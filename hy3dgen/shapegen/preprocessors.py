@@ -33,7 +33,7 @@ class ImageProcessorV2:
         self.border_ratio = border_ratio
 
     @staticmethod
-    def recenter(image, border_ratio: float = 0.2):
+    def recenter(image, border_ratio=0.2):
         """
         Recenter an image to leave some empty space at the image border.
 
@@ -99,7 +99,7 @@ class ImageProcessorV2:
             image, mask = self.recenter(image, border_ratio=border_ratio)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         elif isinstance(image, Image.Image):
-            image = image.convert("RGBA")
+            image = image.convert('RGBA')
             image = np.asarray(image)
             image, mask = self.recenter(image, border_ratio=border_ratio)
 

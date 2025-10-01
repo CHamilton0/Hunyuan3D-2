@@ -26,7 +26,7 @@ from einops import rearrange
 
 
 def _chunked_feed_forward(ff: nn.Module, hidden_states: torch.Tensor, chunk_dim: int, chunk_size: int):
-    # "feed_forward_chunk_size" can be used to save memory
+    # 'feed_forward_chunk_size' can be used to save memory
     if hidden_states.shape[chunk_dim] % chunk_size != 0:
         raise ValueError(
             f"`hidden_states` dimension to be chunked: {hidden_states.shape[chunk_dim]} has to be divisible by chunk size: {chunk_size}. "
@@ -39,7 +39,7 @@ def _chunked_feed_forward(ff: nn.Module, hidden_states: torch.Tensor, chunk_dim:
 
 
 class Basic2p5DTransformerBlock(nn.Module):
-    def __init__(self, transformer: BasicTransformerBlock, layer_name, use_ma=True, use_ra=True, is_turbo=False) -> None:
+    def __init__(self, transformer: BasicTransformerBlock, layer_name, use_ma=True, use_ra=True, is_turbo=False):
         super().__init__()
         self.transformer = transformer
         self.layer_name = layer_name
@@ -85,9 +85,9 @@ class Basic2p5DTransformerBlock(nn.Module):
             return getattr(self.transformer, name)
 
     def forward(
-        self, hidden_states: torch.Tensor, attention_mask: torch.Tensor | None = None, encoder_hidden_states: torch.Tensor | None = None,
-        encoder_attention_mask: torch.Tensor | None = None, timestep: torch.LongTensor | None = None, cross_attention_kwargs: dict[str, Any] = None,
-        class_labels: torch.LongTensor | None = None, added_cond_kwargs: dict[str, torch.Tensor] | None = None,
+        self, hidden_states: torch.Tensor, attention_mask: torch.Tensor = None, encoder_hidden_states: torch.Tensor = None,
+        encoder_attention_mask: torch.Tensor = None, timestep: torch.LongTensor = None, cross_attention_kwargs: dict[str, Any] = None,
+        class_labels: torch.LongTensor = None, added_cond_kwargs: dict[str, torch.Tensor] = None,
     ) -> torch.Tensor:
 
         # Notice that normalization is always applied before the real computation in the following blocks.
@@ -101,24 +101,24 @@ class Basic2p5DTransformerBlock(nn.Module):
             mva_scale = cross_attention_kwargs.pop('mva_scale', 1.0)
             ref_scale = cross_attention_kwargs.pop('ref_scale', 1.0)
         else:
-            position_attn_mask = cross_attention_kwargs.pop("position_attn_mask", None)
-            position_voxel_indices = cross_attention_kwargs.pop("position_voxel_indices", None)
+            position_attn_mask = cross_attention_kwargs.pop('position_attn_mask', None)
+            position_voxel_indices = cross_attention_kwargs.pop('position_voxel_indices', None)
             mva_scale = 1.0
             ref_scale = 1.0
 
-        condition_embed_dict = cross_attention_kwargs.pop("condition_embed_dict", None)
+        condition_embed_dict = cross_attention_kwargs.pop('condition_embed_dict', None)
 
-        if self.norm_type == "ada_norm":
+        if self.norm_type == 'ada_norm':
             norm_hidden_states = self.norm1(hidden_states, timestep)
-        elif self.norm_type == "ada_norm_zero":
+        elif self.norm_type == 'ada_norm_zero':
             norm_hidden_states, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.norm1(
                 hidden_states, timestep, class_labels, hidden_dtype=hidden_states.dtype,
             )
-        elif self.norm_type in ["layer_norm", "layer_norm_i2vgen"]:
+        elif self.norm_type in ['layer_norm', 'layer_norm_i2vgen']:
             norm_hidden_states = self.norm1(hidden_states)
-        elif self.norm_type == "ada_norm_continuous":
-            norm_hidden_states = self.norm1(hidden_states, added_cond_kwargs["pooled_text_emb"])
-        elif self.norm_type == "ada_norm_single":
+        elif self.norm_type == 'ada_norm_continuous':
+            norm_hidden_states = self.norm1(hidden_states, added_cond_kwargs['pooled_text_emb'])
+        elif self.norm_type == 'ada_norm_single':
             shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
                 self.scale_shift_table[None] + timestep.reshape(batch_size, 6, -1)
             ).chunk(6, dim=1)
@@ -132,16 +132,16 @@ class Basic2p5DTransformerBlock(nn.Module):
 
         # 1. Prepare GLIGEN inputs
         cross_attention_kwargs = cross_attention_kwargs.copy() if cross_attention_kwargs is not None else {}
-        gligen_kwargs = cross_attention_kwargs.pop("gligen", None)
+        gligen_kwargs = cross_attention_kwargs.pop('gligen', None)
 
         attn_output = self.attn1(
             norm_hidden_states, encoder_hidden_states=encoder_hidden_states if self.only_cross_attention else None, attention_mask=attention_mask,
             **cross_attention_kwargs,
         )
 
-        if self.norm_type == "ada_norm_zero":
+        if self.norm_type == 'ada_norm_zero':
             attn_output = gate_msa.unsqueeze(1) * attn_output
-        elif self.norm_type == "ada_norm_single":
+        elif self.norm_type == 'ada_norm_single':
             attn_output = gate_msa * attn_output
 
         hidden_states = attn_output + hidden_states
@@ -150,11 +150,11 @@ class Basic2p5DTransformerBlock(nn.Module):
 
         # 1.2 Reference Attention
         if 'w' in mode:
-            condition_embed_dict[self.layer_name] = rearrange(norm_hidden_states, '(b n) l c -> b (n l) c', n=num_in_batch)  # B, (N L), C
+            condition_embed_dict[self.layer_name] = rearrange(norm_hidden_states, "(b n) l c -> b (n l) c", n=num_in_batch)  # B, (N L), C
 
         if 'r' in mode and self.use_ra:
             condition_embed = condition_embed_dict[self.layer_name].unsqueeze(1).repeat(1, num_in_batch, 1, 1)  # B N L C
-            condition_embed = rearrange(condition_embed, 'b n l c -> (b n) l c')
+            condition_embed = rearrange(condition_embed, "b n l c -> (b n) l c")
 
             attn_output = self.attn_refview(norm_hidden_states, encoder_hidden_states=condition_embed, attention_mask=None, **cross_attention_kwargs)
             if not self.is_turbo:
@@ -171,7 +171,7 @@ class Basic2p5DTransformerBlock(nn.Module):
 
         # 1.3 Multiview Attention
         if num_in_batch > 1 and self.use_ma:
-            multivew_hidden_states = rearrange(norm_hidden_states, '(b n) l c -> b (n l) c', n=num_in_batch)
+            multivew_hidden_states = rearrange(norm_hidden_states, "(b n) l c -> b (n l) c", n=num_in_batch)
 
             if self.is_turbo:
                 position_mask = None
@@ -189,7 +189,7 @@ class Basic2p5DTransformerBlock(nn.Module):
             else:
                 attn_output = self.attn_multiview(multivew_hidden_states, encoder_hidden_states=multivew_hidden_states, **cross_attention_kwargs)
 
-            attn_output = rearrange(attn_output, 'b (n l) c -> (b n) l c', n=num_in_batch)
+            attn_output = rearrange(attn_output, "b (n l) c -> (b n) l c", n=num_in_batch)
 
             hidden_states = mva_scale * attn_output + hidden_states
             if hidden_states.ndim == 4:
@@ -197,24 +197,24 @@ class Basic2p5DTransformerBlock(nn.Module):
 
         # 1.2 GLIGEN Control
         if gligen_kwargs is not None:
-            hidden_states = self.fuser(hidden_states, gligen_kwargs["objs"])
+            hidden_states = self.fuser(hidden_states, gligen_kwargs['objs'])
 
         # 3. Cross-Attention
         if self.attn2 is not None:
-            if self.norm_type == "ada_norm":
+            if self.norm_type == 'ada_norm':
                 norm_hidden_states = self.norm2(hidden_states, timestep)
-            elif self.norm_type in ["ada_norm_zero", "layer_norm", "layer_norm_i2vgen"]:
+            elif self.norm_type in ['ada_norm_zero', 'layer_norm', 'layer_norm_i2vgen']:
                 norm_hidden_states = self.norm2(hidden_states)
-            elif self.norm_type == "ada_norm_single":
+            elif self.norm_type == 'ada_norm_single':
                 # For PixArt norm2 isn't applied here:
                 # https://github.com/PixArt-alpha/PixArt-alpha/blob/0f55e922376d8b797edd44d25d0e7464b260dcab/diffusion/model/nets/PixArtMS.py#L70C1-L76C103
                 norm_hidden_states = hidden_states
-            elif self.norm_type == "ada_norm_continuous":
-                norm_hidden_states = self.norm2(hidden_states, added_cond_kwargs["pooled_text_emb"])
+            elif self.norm_type == 'ada_norm_continuous':
+                norm_hidden_states = self.norm2(hidden_states, added_cond_kwargs['pooled_text_emb'])
             else:
                 raise ValueError("Incorrect norm.")
 
-            if self.pos_embed is not None and self.norm_type != "ada_norm_single":
+            if self.pos_embed is not None and self.norm_type != 'ada_norm_single':
                 norm_hidden_states = self.pos_embed(norm_hidden_states)
 
             attn_output = self.attn2(
@@ -225,27 +225,27 @@ class Basic2p5DTransformerBlock(nn.Module):
 
         # 4. Feed-forward
         # i2vgen doesn't have this norm 🤷‍♂️
-        if self.norm_type == "ada_norm_continuous":
-            norm_hidden_states = self.norm3(hidden_states, added_cond_kwargs["pooled_text_emb"])
-        elif not self.norm_type == "ada_norm_single":
+        if self.norm_type == 'ada_norm_continuous':
+            norm_hidden_states = self.norm3(hidden_states, added_cond_kwargs['pooled_text_emb'])
+        elif not self.norm_type == 'ada_norm_single':
             norm_hidden_states = self.norm3(hidden_states)
 
-        if self.norm_type == "ada_norm_zero":
+        if self.norm_type == 'ada_norm_zero':
             norm_hidden_states = norm_hidden_states * (1 + scale_mlp[:, None]) + shift_mlp[:, None]
 
-        if self.norm_type == "ada_norm_single":
+        if self.norm_type == 'ada_norm_single':
             norm_hidden_states = self.norm2(hidden_states)
             norm_hidden_states = norm_hidden_states * (1 + scale_mlp) + shift_mlp
 
         if self._chunk_size is not None:
-            # "feed_forward_chunk_size" can be used to save memory
+            # 'feed_forward_chunk_size' can be used to save memory
             ff_output = _chunked_feed_forward(self.ff, norm_hidden_states, self._chunk_dim, self._chunk_size)
         else:
             ff_output = self.ff(norm_hidden_states)
 
-        if self.norm_type == "ada_norm_zero":
+        if self.norm_type == 'ada_norm_zero':
             ff_output = gate_mlp.unsqueeze(1) * ff_output
-        elif self.norm_type == "ada_norm_single":
+        elif self.norm_type == 'ada_norm_single':
             ff_output = gate_mlp * ff_output
 
         hidden_states = ff_output + hidden_states
@@ -267,10 +267,10 @@ def compute_voxel_grid_mask(position, grid_resolution=8):
 
 
     position = rearrange(
-        position, 'b n c (num_h grid_h) (num_w grid_w) -> b n num_h num_w c grid_h grid_w', num_h=grid_resolution, num_w=grid_resolution,
+        position, "b n c (num_h grid_h) (num_w grid_w) -> b n num_h num_w c grid_h grid_w", num_h=grid_resolution, num_w=grid_resolution,
     )
     valid_mask = rearrange(
-        valid_mask, 'b n c (num_h grid_h) (num_w grid_w) -> b n num_h num_w c grid_h grid_w', num_h=grid_resolution, num_w=grid_resolution,
+        valid_mask, "b n c (num_h grid_h) (num_w grid_w) -> b n num_h num_w c grid_h grid_w", num_h=grid_resolution, num_w=grid_resolution,
     )
 
     grid_position = position.sum(dim=(-2, -1))
@@ -280,7 +280,7 @@ def compute_voxel_grid_mask(position, grid_resolution=8):
     grid_position[count_masked < 5] = 0
 
     grid_position = grid_position.permute(0, 1, 4, 2, 3)
-    grid_position = rearrange(grid_position, 'b n c h w -> b n (h w) c')
+    grid_position = rearrange(grid_position, "b n c h w -> b n (h w) c")
 
     grid_position_expanded_1 = grid_position.unsqueeze(2).unsqueeze(4)  # 形状变为 B, N, 1, L, 1, 3
     grid_position_expanded_2 = grid_position.unsqueeze(1).unsqueeze(3)  # 形状变为 B, 1, N, 1, L, 3
@@ -303,7 +303,7 @@ def compute_multi_resolution_mask(position_maps, grid_resolutions=[32, 16, 8]):
     with torch.no_grad():
         for grid_resolution in grid_resolutions:
             position_mask = compute_voxel_grid_mask(position_maps, grid_resolution)
-            position_mask = rearrange(position_mask, 'b ni nj li lj -> b (ni li) (nj lj)')
+            position_mask = rearrange(position_mask, "b ni nj li lj -> b (ni li) (nj lj)")
             position_attn_mask[position_mask.shape[1]] = position_mask
     return position_attn_mask
 
@@ -319,10 +319,10 @@ def compute_discrete_voxel_indice(position, grid_resolution=8, voxel_resolution=
     position[valid_mask == False] = 0
 
     position = rearrange(
-        position, 'b n c (num_h grid_h) (num_w grid_w) -> b n num_h num_w c grid_h grid_w', num_h=grid_resolution, num_w=grid_resolution,
+        position, "b n c (num_h grid_h) (num_w grid_w) -> b n num_h num_w c grid_h grid_w", num_h=grid_resolution, num_w=grid_resolution,
     )
     valid_mask = rearrange(
-        valid_mask, 'b n c (num_h grid_h) (num_w grid_w) -> b n num_h num_w c grid_h grid_w', num_h=grid_resolution, num_w=grid_resolution,
+        valid_mask, "b n c (num_h grid_h) (num_w grid_w) -> b n num_h num_w c grid_h grid_w", num_h=grid_resolution, num_w=grid_resolution,
     )
 
     grid_position = position.sum(dim=(-2, -1))
@@ -341,12 +341,12 @@ def compute_multi_resolution_discrete_voxel_indice(position_maps, grid_resolutio
     with torch.no_grad():
         for grid_resolution, voxel_resolution in zip(grid_resolutions, voxel_resolutions):
             voxel_indice = compute_discrete_voxel_indice(position_maps, grid_resolution, voxel_resolution)
-            voxel_indice = rearrange(voxel_indice, 'b n c h w -> b (n h w) c')
+            voxel_indice = rearrange(voxel_indice, "b n c h w -> b (n h w) c")
             voxel_indices[voxel_indice.shape[1]] = {'voxel_indices': voxel_indice, 'voxel_resolution': voxel_resolution}
     return voxel_indices
 
 class UNet2p5DConditionModel(nn.Module):
-    def __init__(self, unet: UNet2DConditionModel) -> None:
+    def __init__(self, unet: UNet2DConditionModel):
         super().__init__()
         self.unet = unet
 
@@ -366,13 +366,13 @@ class UNet2p5DConditionModel(nn.Module):
     @staticmethod
     def from_pretrained(pretrained_model_name_or_path, **kwargs):
         torch_dtype = kwargs.pop('torch_dtype', torch.float32)
-        config_path = os.path.join(pretrained_model_name_or_path, 'config.json')
-        unet_ckpt_path = os.path.join(pretrained_model_name_or_path, 'diffusion_pytorch_model.bin')
+        config_path = os.path.join(pretrained_model_name_or_path, "config.json")
+        unet_ckpt_path = os.path.join(pretrained_model_name_or_path, "diffusion_pytorch_model.bin")
         with open(config_path, 'r', encoding='utf-8') as file:
             config = json.load(file)
         unet = UNet2DConditionModel(**config)
         unet = UNet2p5DConditionModel(unet)
-        unet_ckpt = torch.load(unet_ckpt_path, map_location='cpu', weights_only=True)
+        unet_ckpt = torch.load(unet_ckpt_path, map_location='cpu', weights_only=True, mmap=True)
         unet.load_state_dict(unet_ckpt, strict=True)
         unet = unet.to(torch_dtype)
         return unet
@@ -403,7 +403,7 @@ class UNet2p5DConditionModel(nn.Module):
     def init_attention(self, unet, use_ma=False, use_ra=False, is_turbo=False):
 
         for down_block_i, down_block in enumerate(unet.down_blocks):
-            if hasattr(down_block, "has_cross_attention") and down_block.has_cross_attention:
+            if hasattr(down_block, 'has_cross_attention') and down_block.has_cross_attention:
                 for attn_i, attn in enumerate(down_block.attentions):
                     for transformer_i, transformer in enumerate(attn.transformer_blocks):
                         if isinstance(transformer, BasicTransformerBlock):
@@ -411,7 +411,7 @@ class UNet2p5DConditionModel(nn.Module):
                                 transformer, f'down_{down_block_i}_{attn_i}_{transformer_i}', use_ma, use_ra, is_turbo,
                             )
 
-        if hasattr(unet.mid_block, "has_cross_attention") and unet.mid_block.has_cross_attention:
+        if hasattr(unet.mid_block, 'has_cross_attention') and unet.mid_block.has_cross_attention:
             for attn_i, attn in enumerate(unet.mid_block.attentions):
                 for transformer_i, transformer in enumerate(attn.transformer_blocks):
                     if isinstance(transformer, BasicTransformerBlock):
@@ -420,7 +420,7 @@ class UNet2p5DConditionModel(nn.Module):
                         )
 
         for up_block_i, up_block in enumerate(unet.up_blocks):
-            if hasattr(up_block, "has_cross_attention") and up_block.has_cross_attention:
+            if hasattr(up_block, 'has_cross_attention') and up_block.has_cross_attention:
                 for attn_i, attn in enumerate(up_block.attentions):
                     for transformer_i, transformer in enumerate(attn.transformer_blocks):
                         if isinstance(transformer, BasicTransformerBlock):
@@ -443,21 +443,21 @@ class UNet2p5DConditionModel(nn.Module):
 
         if self.use_camera_embedding:
             camera_info_gen = cached_condition['camera_info_gen'] + self.max_num_ref_image
-            camera_info_gen = rearrange(camera_info_gen, 'b n -> (b n)')
+            camera_info_gen = rearrange(camera_info_gen, "b n -> (b n)")
         else:
             camera_info_gen = None
 
         sample = [sample]
         if 'normal_imgs' in cached_condition:
-            sample.append(cached_condition["normal_imgs"])
+            sample.append(cached_condition['normal_imgs'])
         if 'position_imgs' in cached_condition:
-            sample.append(cached_condition["position_imgs"])
+            sample.append(cached_condition['position_imgs'])
         sample = torch.cat(sample, dim=2)
 
-        sample = rearrange(sample, 'b n c h w -> (b n) c h w')
+        sample = rearrange(sample, "b n c h w -> (b n) c h w")
 
         encoder_hidden_states_gen = encoder_hidden_states.unsqueeze(1).repeat(1, N_gen, 1, 1)
-        encoder_hidden_states_gen = rearrange(encoder_hidden_states_gen, 'b n l c -> (b n) l c')
+        encoder_hidden_states_gen = rearrange(encoder_hidden_states_gen, "b n l c -> (b n) l c")
 
         if self.use_ra:
             if 'condition_embed_dict' in cached_condition:
@@ -468,14 +468,14 @@ class UNet2p5DConditionModel(nn.Module):
                 N_ref = ref_latents.shape[1]
                 if self.use_camera_embedding:
                     camera_info_ref = cached_condition['camera_info_ref']
-                    camera_info_ref = rearrange(camera_info_ref, 'b n -> (b n)')
+                    camera_info_ref = rearrange(camera_info_ref, "b n -> (b n)")
                 else:
                     camera_info_ref = None
 
-                ref_latents = rearrange(ref_latents, 'b n c h w -> (b n) c h w')
+                ref_latents = rearrange(ref_latents, "b n c h w -> (b n) c h w")
 
                 encoder_hidden_states_ref = self.unet.learned_text_clip_ref.unsqueeze(1).repeat(B, N_ref, 1, 1)
-                encoder_hidden_states_ref = rearrange(encoder_hidden_states_ref, 'b n l c -> (b n) l c')
+                encoder_hidden_states_ref = rearrange(encoder_hidden_states_ref, "b n l c -> (b n) l c")
 
                 noisy_ref_latents = ref_latents
                 timestep_ref = 0

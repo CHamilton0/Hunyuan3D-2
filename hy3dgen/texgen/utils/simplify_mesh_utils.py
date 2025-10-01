@@ -23,12 +23,12 @@ def remesh_mesh(mesh_path, remesh_path, method='trimesh'):
 
 
 def mesh_simplify_trimesh(inputpath, outputpath):
-    import pymeshlab
-    ms = pymeshlab.MeshSet()
+    import pymeshlab.pmeshlab as pml
+    ms = pml.MeshSet()
     ms.load_new_mesh(inputpath, load_in_a_single_layer=True)
-    ms.save_current_mesh(outputpath.replace('.glb', '.obj'), save_textures=False)
+    ms.save_current_mesh(outputpath.replace(".glb", ".obj"), save_textures=False)
 
-    courent = trimesh.load(outputpath.replace('.glb', '.obj'), force='mesh')
+    courent = trimesh.load(outputpath.replace(".glb", ".obj"), force='mesh')
     face_num = courent.faces.shape[0]
 
     if face_num > 100000:

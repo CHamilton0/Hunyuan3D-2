@@ -105,7 +105,7 @@ std::vector<torch::Tensor> rasterize_image_cpu(torch::Tensor V, torch::Tensor F,
     if (!use_depth_prior) {
         for (int i = 0; i < num_faces; ++i) {
             rasterizeImagecoordsKernelCPU(V.data_ptr<float>(), F.data_ptr<int>(), 0,
-                (INT64*)z_min.data_ptr<int64_t>(), occlusion_truncation, width, height, num_vertices, num_faces, i); 
+                (INT64*)z_min.data_ptr<int64_t>(), occlusion_truncation, width, height, num_vertices, num_faces, i);
         }
     } else {
         for (int i = 0; i < num_faces; ++i)
@@ -133,7 +133,7 @@ std::vector<torch::Tensor> rasterize_image(torch::Tensor V, torch::Tensor F, tor
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.def("rasterize_image", &rasterize_image, "Custom image rasterization");
-  m.def("build_hierarchy", &build_hierarchy, "Custom image rasterization");
-  m.def("build_hierarchy_with_feat", &build_hierarchy_with_feat, "Custom image rasterization");
+    m.def("rasterize_image", &rasterize_image, "Custom image rasterization");
+    m.def("build_hierarchy", &build_hierarchy, "Custom image rasterization");
+    m.def("build_hierarchy_with_feat", &build_hierarchy_with_feat, "Custom image rasterization");
 }

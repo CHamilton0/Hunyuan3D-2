@@ -16,7 +16,7 @@ import logging
 import os
 from functools import wraps
 
-import torch
+from torch import cuda
 
 
 def get_logger(name):
@@ -27,7 +27,7 @@ def get_logger(name):
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
 
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
@@ -49,7 +49,7 @@ class synchronize_timer:
 
     Example as decorator:
     ```python
-    @synchronize_timer('Export to trimesh')
+    @synchronize_timer("Export to trimesh")
     def export_to_trimesh(mesh_output):
         pass
     ```
@@ -61,8 +61,8 @@ class synchronize_timer:
     def __enter__(self):
         """Context manager entry: start timing."""
         if os.environ.get('HY3DGEN_DEBUG', '0') == '1':
-            self.start = torch.cuda.Event(enable_timing=True)
-            self.end = torch.cuda.Event(enable_timing=True)
+            self.start = cuda.Event(enable_timing=True)
+            self.end = cuda.Event(enable_timing=True)
             self.start.record()
             return lambda: self.time
 
@@ -70,7 +70,7 @@ class synchronize_timer:
         """Context manager exit: stop timing and log results."""
         if os.environ.get('HY3DGEN_DEBUG', '0') == '1':
             self.end.record()
-            torch.cuda.synchronize()
+            cuda.synchronize()
             self.time = self.start.elapsed_time(self.end)
             if self.name is not None:
                 logger.info(f"{self.name} takes {self.time} ms")
@@ -86,25 +86,17 @@ class synchronize_timer:
 
 
 def smart_load_model(model_path, subfolder, use_safetensors, variant):
-
     original_model_path = model_path
 
     # Try local path
-    base_dir = os.environ.get('HY3DGEN_MODELS', os.path.join("~", ".cache", "huggingface", "hub"))
-    model_dir = "--".join(("models",) + os.path.split(model_path))
-    model_path = os.path.expanduser(os.path.join(base_dir, model_dir, "snapshots"))
+    base_dir = os.environ.get('HY3DGEN_MODELS', os.path.expanduser(os.path.join("~", ".cache", "hy3dgen")))
+    model_dir = os.path.join(base_dir, *os.path.split(model_path))
+    os.makedirs(model_dir, exist_ok=True)
+    model_path = os.path.join(model_dir, subfolder)
 
-    config_name = "config.yaml"
-    extension = "safetensors" if use_safetensors else "ckpt"
-    variant = "" if variant is None else f".{variant}"
-    ckpt_name = f"model{variant}.{extension}"
-
-    for dir_path, dir_names, file_names in os.walk(model_path):
-        if dir_path.endswith(subfolder):
-            model_path = os.path.dirname(dir_path)
-            break
-
-    model_path = os.path.join(model_path, subfolder)
+    extension = 'safetensors' if use_safetensors else 'ckpt'
+    variant = '' if variant is None else f'.{variant}'
+    config_name, ckpt_name = "config.yaml", f"model{variant}.{extension}"
 
     logger.info(f"Try to load model from local path: {model_path}")
     if not os.path.exists(os.path.join(model_path, ckpt_name)):
@@ -114,7 +106,7 @@ def smart_load_model(model_path, subfolder, use_safetensors, variant):
             # Download only specified subdirectory (只下载指定子目录)
             # Key modification: Pattern matching subfolders (关键修改：模式匹配子文件夹)
             path = snapshot_download(
-                repo_id=original_model_path,
+                repo_id=original_model_path, local_dir=model_dir,
                 allow_patterns=[os.path.join(subfolder, f) for f in [config_name, ckpt_name]],
             )
             # Keep path splicing logic unchanged (保持路径拼接逻辑不变)
@@ -128,7 +120,6 @@ def smart_load_model(model_path, subfolder, use_safetensors, variant):
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Model path {original_model_path} not found.")
 
-    config_path = os.path.join(model_path, config_name)
-    ckpt_path = os.path.join(model_path, ckpt_name)
+    config_path, ckpt_path = [os.path.join(model_path, f) for f in [config_name, ckpt_name]]
 
     return config_path, ckpt_path

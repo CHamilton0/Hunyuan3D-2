@@ -77,8 +77,8 @@ def meshVerticeInpaint_smooth(texture, mask, vtx_pos, vtx_uv, pos_idx, uv_idx):
                 new_mask[uv_u, uv_v] = 255
     return new_texture, new_mask
 
-def meshVerticeInpaint(texture, mask, vtx_pos, vtx_uv, pos_idx, uv_idx, method="smooth"):
-    if method == "smooth":
+def meshVerticeInpaint(texture, mask, vtx_pos, vtx_uv, pos_idx, uv_idx, method='smooth'):
+    if method == 'smooth':
         return meshVerticeInpaint_smooth(texture, mask, vtx_pos, vtx_uv, pos_idx, uv_idx)
     else:
         raise ValueError("Invalid method. Use 'smooth' or 'forward'.")

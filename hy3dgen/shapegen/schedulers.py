@@ -31,13 +31,13 @@ import numpy as np
 import torch
 from diffusers.configuration_utils import ConfigMixin, register_to_config
 from diffusers.schedulers.scheduling_utils import SchedulerMixin
-from diffusers.utils import BaseOutput, logging
+from diffusers.utils import logging, outputs
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 @dataclass
-class FlowMatchEulerDiscreteSchedulerOutput(BaseOutput):
+class FlowMatchEulerDiscreteSchedulerOutput(outputs.BaseOutput):
     """
     Output class for the scheduler's `step` function output.
 
@@ -74,7 +74,7 @@ class FlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
     order = 1
 
     @register_to_config
-    def __init__(self, num_train_timesteps: int = 1000, shift: float = 1.0, use_dynamic_shifting=False):
+    def __init__(self, num_train_timesteps=1000, shift=1.0, use_dynamic_shifting=False):
         timesteps = np.linspace(1, num_train_timesteps, num_train_timesteps, dtype=np.float32).copy()
         timesteps = torch.from_numpy(timesteps).to(dtype=torch.float32)
 
@@ -88,7 +88,7 @@ class FlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
         self._step_index = None
         self._begin_index = None
 
-        self.sigmas = sigmas.to("cpu")  # to avoid too much CPU/GPU communication
+        self.sigmas = sigmas.to('cpu')  # to avoid too much CPU/GPU communication
         self.sigma_min = self.sigmas[-1].item()
         self.sigma_max = self.sigmas[0].item()
 
@@ -103,7 +103,7 @@ class FlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
         return self._begin_index
 
     # Copied from diffusers.schedulers.scheduling_dpmsolver_multistep.DPMSolverMultistepScheduler.set_begin_index
-    def set_begin_index(self, begin_index: int = 0):
+    def set_begin_index(self, begin_index=0):
         """
         Sets the begin index for the scheduler. This function should be run from pipeline before the inference.
 
@@ -115,7 +115,7 @@ class FlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
 
         self._begin_index = begin_index
 
-    def scale_noise(self, sample: torch.FloatTensor, timestep: float | int | torch.FloatTensor, noise: torch.FloatTensor | None = None) -> torch.FloatTensor:
+    def scale_noise(self, sample: torch.FloatTensor, timestep: float | int | torch.FloatTensor, noise: torch.FloatTensor = None) -> torch.FloatTensor:
         """
         Forward process in flow-matching.
 
@@ -136,7 +136,7 @@ class FlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
         # Make sure sigmas and timesteps have the same device and dtype as original_samples
         sigmas = self.sigmas.to(device=sample.device, dtype=sample.dtype)
 
-        if sample.device.type == "mps" and torch.is_floating_point(timestep):
+        if sample.device.type == 'mps' and torch.is_floating_point(timestep):
             # mps does not support float64
             schedule_timesteps = self.timesteps.to(sample.device, dtype=torch.float32)
             timestep = timestep.to(sample.device, dtype=torch.float32)
@@ -168,7 +168,7 @@ class FlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
     def time_shift(self, mu: float, sigma: float, t: torch.Tensor):
         return math.exp(mu) / (math.exp(mu) + (1 / t - 1) ** sigma)
 
-    def set_timesteps(self, num_inference_steps: int = None, device: str | torch.device = None, sigmas: list[float] = None, mu: float = None):
+    def set_timesteps(self, num_inference_steps: int = None, device: torch.types.Device = None, sigmas: list[float] = None, mu: float = None):
         """
         Sets the discrete timesteps used for the diffusion chain (to be run before inference).
 
@@ -176,7 +176,7 @@ class FlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
         ----------
         num_inference_steps : int | None, optional, default=None
             The number of diffusion steps used when generating samples with a pre-trained model.
-        device : str | torch.device | None, optional, default=None
+        device : Device, optional, default=None
             The device to which the timesteps should be moved to. If `None`, the timesteps are not moved.
         sigma : list[float] | None, optional, default=None
         mu : float | None, optional, default=None
@@ -226,8 +226,8 @@ class FlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
             self._step_index = self._begin_index
 
     def step(
-        self, model_output: torch.FloatTensor, timestep: float | torch.FloatTensor, sample: torch.FloatTensor, s_churn: float = 0.0, s_tmin: float = 0.0,
-        s_tmax: float = float('inf'), s_noise: float = 1.0, generator: torch.Generator | None = None, return_dict: bool = True,
+        self, model_output: torch.FloatTensor, timestep: float | torch.FloatTensor, sample: torch.FloatTensor, s_churn=0.0, s_tmin=0.0, s_tmax=float('inf'),
+        s_noise=1.0, generator: torch.Generator = None, return_dict=True,
     ) -> FlowMatchEulerDiscreteSchedulerOutput | tuple:
         """
         Predict the sample from the previous timestep by reversing the SDE. This function propagates the diffusion process from the learned model outputs (most often
@@ -290,7 +290,7 @@ class FlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
 
 
 @dataclass
-class ConsistencyFlowMatchEulerDiscreteSchedulerOutput(BaseOutput):
+class ConsistencyFlowMatchEulerDiscreteSchedulerOutput(outputs.BaseOutput):
     prev_sample: torch.FloatTensor
     pred_original_sample: torch.FloatTensor
 
@@ -300,7 +300,7 @@ class ConsistencyFlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
     order = 1
 
     @register_to_config
-    def __init__(self, num_train_timesteps: int = 1000, pcm_timesteps: int = 50):
+    def __init__(self, num_train_timesteps=1000, pcm_timesteps=50):
         sigmas = np.linspace(0, 1, num_train_timesteps)
         step_ratio = num_train_timesteps // pcm_timesteps
 
@@ -313,7 +313,7 @@ class ConsistencyFlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
         self.timesteps = self.sigmas * num_train_timesteps
         self._step_index = None
         self._begin_index = None
-        self.sigmas = self.sigmas.to("cpu")  # to avoid too much CPU/GPU communication
+        self.sigmas = self.sigmas.to('cpu')  # to avoid too much CPU/GPU communication
 
     @property
     def step_index(self):
@@ -326,7 +326,7 @@ class ConsistencyFlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
         return self._begin_index
 
     # Copied from diffusers.schedulers.scheduling_dpmsolver_multistep.DPMSolverMultistepScheduler.set_begin_index
-    def set_begin_index(self, begin_index: int = 0):
+    def set_begin_index(self, begin_index=0):
         """
         Sets the begin index for the scheduler. This function should be run from pipeline before the inference.
 
@@ -341,7 +341,7 @@ class ConsistencyFlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
     def _sigma_to_t(self, sigma):
         return sigma * self.config.num_train_timesteps
 
-    def set_timesteps(self, num_inference_steps: int = None, device: str | torch.device = None, sigmas: list[float] | None = None):
+    def set_timesteps(self, num_inference_steps: int = None, device: torch.types.Device = None, sigmas: list[float] = None):
         """
         Sets the discrete timesteps used for the diffusion chain (to be run before inference).
 
@@ -349,7 +349,7 @@ class ConsistencyFlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
         ----------
         num_inference_steps : int | None, optional, default=None
             The number of diffusion steps used when generating samples with a pre-trained model.
-        device : str | torch.device | None, optional, default=None
+        device : Device, optional, default=None
             The device to which the timesteps should be moved to. If `None`, the timesteps are not moved.
         sigmas : list[float] | None, optional, default=None
         """
@@ -390,8 +390,8 @@ class ConsistencyFlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
             self._step_index = self._begin_index
 
     def step(
-        self, model_output: torch.FloatTensor, timestep: float | torch.FloatTensor, sample: torch.FloatTensor, generator: torch.Generator | None = None,
-        return_dict: bool = True,
+        self, model_output: torch.FloatTensor, timestep: float | torch.FloatTensor, sample: torch.FloatTensor, generator: torch.Generator = None,
+        return_dict=True,
     ) -> ConsistencyFlowMatchEulerDiscreteSchedulerOutput | tuple:
         if (isinstance(timestep, int) or isinstance(timestep, torch.IntTensor) or isinstance(timestep, torch.LongTensor)):
             raise ValueError(

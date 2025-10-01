@@ -126,12 +126,12 @@ class SurfaceLoader:
 
         mesh = mesh_or_mesh_path
         if isinstance(mesh, str):
-            mesh = trimesh.load(mesh, force="mesh", merge_primitives=True)
-        if isinstance(mesh, trimesh.scene.Scene):
-            for idx, obj in enumerate(mesh.geometry.values()):
-                if idx == 0:
-                    temp_mesh = obj
-                else:
+            mesh = trimesh.load(mesh, force='mesh', merge_primitives=True)
+        if isinstance(mesh, trimesh.Scene):
+            geometries = list(mesh.geometry.values())
+            temp_mesh = geometries[0]
+            if len(geometries) > 1:
+                for obj in geometries[1:]:
                     temp_mesh = temp_mesh + obj
             mesh = temp_mesh
         surface, mesh = load_surface(mesh, num_points=num_points)
@@ -152,12 +152,12 @@ class SharpEdgeSurfaceLoader:
 
         mesh = mesh_or_mesh_path
         if isinstance(mesh, str):
-            mesh = trimesh.load(mesh, force="mesh", merge_primitives=True)
-        if isinstance(mesh, trimesh.scene.Scene):
-            for idx, obj in enumerate(mesh.geometry.values()):
-                if idx == 0:
-                    temp_mesh = obj
-                else:
+            mesh = trimesh.load(mesh, force='mesh', merge_primitives=True)
+        if isinstance(mesh, trimesh.Scene):
+            geometries = list(mesh.geometry.values())
+            temp_mesh = geometries[0]
+            if len(geometries) > 1:
+                for obj in geometries[1:]:
                     temp_mesh = temp_mesh + obj
             mesh = temp_mesh
         surface, mesh = load_surface_sharpegde(mesh, num_points=num_uniform_points, num_sharp_points=num_sharp_points)

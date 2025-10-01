@@ -20,6 +20,31 @@ class BackgroundRemover():
     def __init__(self):
         self.session = new_session()
 
-    def __call__(self, image: Image.Image):
-        output = remove(image, session=self.session, bgcolor=(255, 255, 255, 0))
+    def __call__(self, image: Image.Image, am=False, amft=240, ambt=10, ames=10):
+        """
+        Remove background from image.
+        
+        Parameters
+        ----------
+        image : Image
+            Input image.
+        am : bool, optional, default=False
+            Alpha matting.
+        amft : int, optional, default=240
+            Alpha matting foreground threshold.
+        ambt : int, optional, default=10
+            Alpha matting background threshold.
+        ames : int, optional, default=10
+            Alpha matting erode size.
+        
+        Returns
+        -------
+        output : btyes | Image | ndarray
+            Cutout image with background removed.
+        """
+
+        output = remove(
+            image, alpha_matting=am, alpha_matting_foreground_threshold=amft, alpha_matting_background_threshold=ambt, alpha_matting_erode_size=ames,
+            session=self.session, bgcolor=(255, 255, 255, 0),
+        )
         return output

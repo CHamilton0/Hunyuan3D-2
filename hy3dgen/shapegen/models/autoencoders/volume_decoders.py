@@ -120,7 +120,7 @@ def extract_near_surface_volume_fn(input_tensor: torch.Tensor, alpha: float):
     return mask * valid_mask.to(torch.int32)
 
 
-def generate_dense_grid_points(bbox_min: np.ndarray, bbox_max: np.ndarray, octree_resolution: int, indexing: str = "ij"):
+def generate_dense_grid_points(bbox_min: np.ndarray, bbox_max: np.ndarray, octree_resolution: int, indexing='ij'):
     length = bbox_max - bbox_min
     num_cells = octree_resolution
 
@@ -137,8 +137,8 @@ def generate_dense_grid_points(bbox_min: np.ndarray, bbox_max: np.ndarray, octre
 class VanillaVolumeDecoder:
     @torch.no_grad()
     def __call__(
-        self, latents: torch.FloatTensor, geo_decoder: Callable, bounds: tuple[float] | list[float] | float = 1.01, num_chunks: int = 10000,
-        octree_resolution: int = None, enable_pbar: bool = True, **kwargs,
+        self, latents: torch.FloatTensor, geo_decoder: Callable, bounds: tuple[float] | list[float] | float = 1.01, num_chunks=10000, octree_resolution: int = None,
+        enable_pbar=True, **kwargs,
     ):
         device = latents.device
         dtype = latents.dtype
@@ -150,7 +150,7 @@ class VanillaVolumeDecoder:
 
         bbox_min, bbox_max = np.array(bounds[0:3]), np.array(bounds[3:6])
         xyz_samples, grid_size, length = generate_dense_grid_points(
-            bbox_min=bbox_min, bbox_max=bbox_max, octree_resolution=octree_resolution, indexing="ij",
+            bbox_min=bbox_min, bbox_max=bbox_max, octree_resolution=octree_resolution, indexing='ij',
         )
         xyz_samples = torch.from_numpy(xyz_samples).to(device, dtype=dtype).contiguous().reshape(-1, 3)
 
@@ -171,8 +171,8 @@ class VanillaVolumeDecoder:
 class HierarchicalVolumeDecoding:
     @torch.no_grad()
     def __call__(
-        self, latents: torch.FloatTensor, geo_decoder: Callable, bounds: tuple[float] | list[float] | float = 1.01, num_chunks: int = 10000, mc_level: float = 0.0,
-        octree_resolution: int = None, min_resolution: int = 63, enable_pbar: bool = True, **kwargs,
+        self, latents: torch.FloatTensor, geo_decoder: Callable, bounds: tuple[float] | list[float] | float = 1.01, num_chunks=10000, mc_level=0.0,
+        octree_resolution: int = None, min_resolution=63, enable_pbar=True, **kwargs,
     ):
         device = latents.device
         dtype = latents.dtype
@@ -193,7 +193,7 @@ class HierarchicalVolumeDecoding:
         bbox_size = bbox_max - bbox_min
 
         xyz_samples, grid_size, length = generate_dense_grid_points(
-            bbox_min=bbox_min, bbox_max=bbox_max, octree_resolution=resolutions[0], indexing="ij",
+            bbox_min=bbox_min, bbox_max=bbox_max, octree_resolution=resolutions[0], indexing='ij',
         )
 
         dilate = nn.Conv3d(1, 1, 3, padding=1, bias=False, device=device, dtype=dtype)
@@ -264,8 +264,8 @@ class FlashVDMVolumeDecoding:
 
     @torch.no_grad()
     def __call__(
-        self, latents: torch.FloatTensor, geo_decoder: CrossAttentionDecoder, bounds: tuple[float] | list[float] | float = 1.01, num_chunks: int = 10000,
-        mc_level: float = 0.0, octree_resolution: int = None, min_resolution: int = 63, mini_grid_num: int = 4, enable_pbar: bool = True, **kwargs,
+        self, latents: torch.FloatTensor, geo_decoder: CrossAttentionDecoder, bounds: tuple[float] | list[float] | float = 1.01, num_chunks=10000, mc_level=0.0,
+        octree_resolution: int = None, min_resolution=63, mini_grid_num=4, enable_pbar=True, **kwargs,
     ):
         processor = self.processor
         geo_decoder.set_cross_attention_processor(processor)
@@ -294,7 +294,7 @@ class FlashVDMVolumeDecoding:
         bbox_size = bbox_max - bbox_min
 
         xyz_samples, grid_size, length = generate_dense_grid_points(
-            bbox_min=bbox_min, bbox_max=bbox_max, octree_resolution=resolutions[0], indexing="ij",
+            bbox_min=bbox_min, bbox_max=bbox_max, octree_resolution=resolutions[0], indexing='ij',
         )
 
         dilate = nn.Conv3d(1, 1, 3, padding=1, bias=False, device=device, dtype=dtype)

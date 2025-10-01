@@ -40,7 +40,7 @@ class MoEGate(nn.Module):
         self.weight = nn.Parameter(torch.empty((self.n_routed_experts, self.gating_dim)))
         self.reset_parameters()
 
-    def reset_parameters(self) -> None:
+    def reset_parameters(self):
         nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
 
     def forward(self, hidden_states):
@@ -87,7 +87,7 @@ class MoEGate(nn.Module):
 
 
 class MoEBlock(nn.Module):
-    def __init__(self, dim, num_experts=8, moe_top_k=2, activation_fn="gelu", dropout=0.0, final_dropout=False, ff_inner_dim=None, ff_bias=True):
+    def __init__(self, dim, num_experts=8, moe_top_k=2, activation_fn='gelu', dropout=0.0, final_dropout=False, ff_inner_dim=None, ff_bias=True):
         super().__init__()
         self.moe_top_k = moe_top_k
         self.experts = nn.ModuleList(

@@ -9,11 +9,11 @@
 namespace py = pybind11;
 using namespace std;
 
-std::pair<py::array_t<float>,
-  py::array_t<uint8_t>>  meshVerticeInpaint_smooth(py::array_t<float> texture,
-py::array_t<uint8_t> mask,
-                 py::array_t<float> vtx_pos, py::array_t<float> vtx_uv, 
-                 py::array_t<int> pos_idx, py::array_t<int> uv_idx) {
+std::pair<py::array_t<float>, py::array_t<uint8_t>> meshVerticeInpaint_smooth(
+    py::array_t<float> texture, py::array_t<uint8_t> mask,
+    py::array_t<float> vtx_pos, py::array_t<float> vtx_uv,
+    py::array_t<int> pos_idx, py::array_t<int> uv_idx
+) {
     auto texture_buf = texture.request();
     auto mask_buf = mask.request();
     auto vtx_pos_buf = vtx_pos.request();
@@ -51,7 +51,7 @@ py::array_t<uint8_t> mask,
                 for (int c = 0; c < texture_channel; ++c) {
                     vtx_color[vtx_idx][c] = texture_ptr[(uv_u * texture_width + uv_v) * texture_channel + c];
                 }
-            }else{
+            } else {
                 uncolored_vtxs.push_back(vtx_idx);
             }
 
@@ -69,14 +69,15 @@ py::array_t<uint8_t> mask,
             vector<float> sum_color(texture_channel, 0.0f);
             float total_weight = 0.0f;
 
-            array<float, 3> vtx_0 = {vtx_pos_ptr[vtx_idx * 3],
-vtx_pos_ptr[vtx_idx * 3 + 1], vtx_pos_ptr[vtx_idx * 3 + 2]};
+            array<float, 3> vtx_0 = {vtx_pos_ptr[vtx_idx * 3], vtx_pos_ptr[vtx_idx * 3 + 1], vtx_pos_ptr[vtx_idx * 3 + 2]};
             for (int connected_idx : G[vtx_idx]) {
                 if (vtx_mask[connected_idx] > 0) {
-                    array<float, 3> vtx1 = {vtx_pos_ptr[connected_idx * 3],
-                    vtx_pos_ptr[connected_idx * 3 + 1], vtx_pos_ptr[connected_idx * 3 + 2]};
-                    float dist_weight = 1.0f / max(sqrt(pow(vtx_0[0] - vtx1[0], 2) + pow(vtx_0[1] - vtx1[1], 2) + \
-                     pow(vtx_0[2] - vtx1[2], 2)), 1E-4);
+                    array<float, 3> vtx1 = {
+                        vtx_pos_ptr[connected_idx * 3],
+                        vtx_pos_ptr[connected_idx * 3 + 1],
+                        vtx_pos_ptr[connected_idx * 3 + 2]
+                    };
+                    float dist_weight = 1.0f / max(sqrt(pow(vtx_0[0] - vtx1[0], 2) + pow(vtx_0[1] - vtx1[1], 2) + pow(vtx_0[2] - vtx1[2], 2)), 1E-4);
                     dist_weight = dist_weight * dist_weight;
                     for (int c = 0; c < texture_channel; ++c) {
                         sum_color[c] += vtx_color[connected_idx][c] * dist_weight;
@@ -96,9 +97,9 @@ vtx_pos_ptr[vtx_idx * 3 + 1], vtx_pos_ptr[vtx_idx * 3 + 2]};
 
         }
 
-        if(last_uncolored_vtx_count==uncolored_vtx_count){
+        if (last_uncolored_vtx_count==uncolored_vtx_count) {
             smooth_count--;
-        }else{
+        } else {
             smooth_count++;
         }
         last_uncolored_vtx_count = uncolored_vtx_count;
@@ -137,14 +138,16 @@ vtx_pos_ptr[vtx_idx * 3 + 1], vtx_pos_ptr[vtx_idx * 3 + 2]};
     // Reshape the new arrays to match the original texture and mask shapes
     new_texture.resize({texture_height, texture_width, 3});
     new_mask.resize({texture_height, texture_width});
-  return std::make_pair(new_texture, new_mask);
+    return std::make_pair(new_texture, new_mask);
 }
 
 
-std::pair<py::array_t<float>, py::array_t<uint8_t>> meshVerticeInpaint(py::array_t<float> texture,
-          py::array_t<uint8_t> mask,
-          py::array_t<float> vtx_pos, py::array_t<float> vtx_uv,
-          py::array_t<int> pos_idx, py::array_t<int> uv_idx, const std::string& method = "smooth") {
+std::pair<py::array_t<float>, py::array_t<uint8_t>> meshVerticeInpaint(
+    py::array_t<float> texture, py::array_t<uint8_t> mask,
+    py::array_t<float> vtx_pos, py::array_t<float> vtx_uv,
+    py::array_t<int> pos_idx, py::array_t<int> uv_idx,
+    const std::string& method = "smooth"
+) {
     if (method == "smooth") {
         return meshVerticeInpaint_smooth(texture, mask, vtx_pos, vtx_uv, pos_idx, uv_idx);
     } else {
@@ -153,9 +156,9 @@ std::pair<py::array_t<float>, py::array_t<uint8_t>> meshVerticeInpaint(py::array
 }
 
 PYBIND11_MODULE(mesh_processor, m) {
-    m.def("meshVerticeInpaint", &meshVerticeInpaint, "A function to process mesh",
-          py::arg("texture"), py::arg("mask"),
-          py::arg("vtx_pos"), py::arg("vtx_uv"),
-          py::arg("pos_idx"), py::arg("uv_idx"),
-          py::arg("method") = "smooth");
+    m.def(
+        "meshVerticeInpaint", &meshVerticeInpaint, "A function to process mesh",
+        py::arg("texture"), py::arg("mask"), py::arg("vtx_pos"), py::arg("vtx_uv"),
+        py::arg("pos_idx"), py::arg("uv_idx"), py::arg("method") = "smooth"
+    );
 }

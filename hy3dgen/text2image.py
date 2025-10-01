@@ -28,7 +28,7 @@ def seed_everything(seed):
 
 
 class HunyuanDiTPipeline:
-    def __init__(self, model_path="Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled", device='cuda'):
+    def __init__(self, model_path="Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled", device: torch.types.Device = 'cuda'):
         self.device = device
         self.pipe = AutoPipelineForText2Image.from_pretrained(
             model_path, torch_dtype=torch.float16, enable_pag=True, pag_applied_layers=["blocks.(16|17|18|19)"]

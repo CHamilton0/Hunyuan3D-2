@@ -14,45 +14,48 @@
 
 import os
 import tempfile
+from typing import TypeAlias
 
 import numpy as np
-import pymeshlab
+import pymeshlab.pmeshlab as pml
 import torch
 import trimesh
 
 from .models.autoencoders import Latent2MeshOutput
 from .utils import synchronize_timer
 
+MeshType: TypeAlias = pml.MeshSet | trimesh.Trimesh | Latent2MeshOutput
+
 
 def load_mesh(path):
     if path.endswith(".glb"):
         mesh = trimesh.load(path)
     else:
-        mesh = pymeshlab.MeshSet()
+        mesh = pml.MeshSet()
         mesh.load_new_mesh(path)
     return mesh
 
 
-def reduce_face(mesh: pymeshlab.MeshSet, max_facenum: int = 200000):
+def reduce_face(mesh: pml.MeshSet, max_facenum=200000):
     if max_facenum > mesh.current_mesh().face_number():
         return mesh
 
     mesh.apply_filter(
-        "meshing_decimation_quadric_edge_collapse", targetfacenum=max_facenum, qualitythr=1.0, preserveboundary=True, boundaryweight=3,
-        preservenormal=True, preservetopology=True, autoclean=True,
+        "meshing_decimation_quadric_edge_collapse", targetfacenum=max_facenum, qualitythr=1.0, preserveboundary=True, boundaryweight=3, preservenormal=True,
+        preservetopology=True, autoclean=True,
     )
     return mesh
 
 
-def remove_floater(mesh: pymeshlab.MeshSet):
+def remove_floater(mesh: pml.MeshSet):
     mesh.apply_filter("compute_selection_by_small_disconnected_components_per_face", nbfaceratio=0.005)
     mesh.apply_filter("compute_selection_transfer_face_to_vertex", inclusive=False)
     mesh.apply_filter("meshing_remove_selected_vertices_and_faces")
     return mesh
 
 
-def pymeshlab2trimesh(mesh: pymeshlab.MeshSet):
-    with tempfile.NamedTemporaryFile(suffix='.ply', delete=False) as temp_file:
+def pymeshlab2trimesh(mesh: pml.MeshSet):
+    with tempfile.NamedTemporaryFile(suffix=".ply", delete=False) as temp_file:
         mesh.save_current_mesh(temp_file.name)
         mesh = trimesh.load(temp_file.name)
     # 检查加载的对象类型
@@ -66,22 +69,22 @@ def pymeshlab2trimesh(mesh: pymeshlab.MeshSet):
 
 
 def trimesh2pymeshlab(mesh: trimesh.Trimesh):
-    with tempfile.NamedTemporaryFile(suffix='.ply', delete=False) as temp_file:
-        if isinstance(mesh, trimesh.scene.Scene):
-            for idx, obj in enumerate(mesh.geometry.values()):
-                if idx == 0:
-                    temp_mesh = obj
-                else:
+    with tempfile.NamedTemporaryFile(suffix=".ply", delete=False) as temp_file:
+        if isinstance(mesh, trimesh.Scene):
+            geometries = list(mesh.geometry.values())
+            temp_mesh = geometries[0]
+            if len(geometries) > 1:
+                for obj in geometries[1:]:
                     temp_mesh = temp_mesh + obj
             mesh = temp_mesh
         mesh.export(temp_file.name)
-        mesh = pymeshlab.MeshSet()
-        mesh.load_new_mesh(temp_file.name)
-    return mesh
+        pml_mesh = pml.MeshSet()
+        pml_mesh.load_new_mesh(temp_file.name)
+    return pml_mesh
 
 
 def export_mesh(input, output):
-    if isinstance(input, pymeshlab.MeshSet):
+    if isinstance(input, pml.MeshSet):
         mesh = output
     elif isinstance(input, Latent2MeshOutput):
         output = Latent2MeshOutput()
@@ -93,12 +96,12 @@ def export_mesh(input, output):
     return mesh
 
 
-def import_mesh(mesh: pymeshlab.MeshSet | trimesh.Trimesh | Latent2MeshOutput | str) -> pymeshlab.MeshSet:
+def import_mesh(mesh: MeshType | str) -> pml.MeshSet:
     if isinstance(mesh, str):
         mesh = load_mesh(mesh)
     elif isinstance(mesh, Latent2MeshOutput):
-        mesh = pymeshlab.MeshSet()
-        mesh_pymeshlab = pymeshlab.Mesh(vertex_matrix=mesh.mesh_v, face_matrix=mesh.mesh_f)
+        mesh = pml.MeshSet()
+        mesh_pymeshlab = pml.Mesh(vertex_matrix=mesh.mesh_v, face_matrix=mesh.mesh_f)
         mesh.add_mesh(mesh_pymeshlab, "converted_mesh")
 
     if isinstance(mesh, (trimesh.Trimesh, trimesh.scene.Scene)):
@@ -108,8 +111,8 @@ def import_mesh(mesh: pymeshlab.MeshSet | trimesh.Trimesh | Latent2MeshOutput | 
 
 
 class FaceReducer:
-    @synchronize_timer('FaceReducer')
-    def __call__(self, mesh: pymeshlab.MeshSet | trimesh.Trimesh | Latent2MeshOutput | str, max_facenum: int = 40000) -> pymeshlab.MeshSet | trimesh.Trimesh:
+    @synchronize_timer("FaceReducer")
+    def __call__(self, mesh: MeshType | str, max_facenum=40000) -> MeshType:
         ms = import_mesh(mesh)
         ms = reduce_face(ms, max_facenum=max_facenum)
         mesh = export_mesh(mesh, ms)
@@ -117,8 +120,8 @@ class FaceReducer:
 
 
 class FloaterRemover:
-    @synchronize_timer('FloaterRemover')
-    def __call__(self, mesh: pymeshlab.MeshSet | trimesh.Trimesh | Latent2MeshOutput | str) -> pymeshlab.MeshSet | trimesh.Trimesh | Latent2MeshOutput:
+    @synchronize_timer("FloaterRemover")
+    def __call__(self, mesh: MeshType | str) -> MeshType:
         ms = import_mesh(mesh)
         ms = remove_floater(ms)
         mesh = export_mesh(mesh, ms)
@@ -126,13 +129,13 @@ class FloaterRemover:
 
 
 class DegenerateFaceRemover:
-    @synchronize_timer('DegenerateFaceRemover')
-    def __call__(self, mesh: pymeshlab.MeshSet | trimesh.Trimesh | Latent2MeshOutput | str) -> pymeshlab.MeshSet | trimesh.Trimesh | Latent2MeshOutput:
+    @synchronize_timer("DegenerateFaceRemover")
+    def __call__(self, mesh: MeshType | str) -> MeshType:
         ms = import_mesh(mesh)
 
-        with tempfile.NamedTemporaryFile(suffix='.ply', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=".ply", delete=False) as temp_file:
             ms.save_current_mesh(temp_file.name)
-            ms = pymeshlab.MeshSet()
+            ms = pml.MeshSet()
             ms.load_new_mesh(temp_file.name)
 
         mesh = export_mesh(mesh, ms)
@@ -164,12 +167,12 @@ class MeshSimplifier:
             executable = os.path.join(CURRENT_DIR, "mesh_simplifier.bin")
         self.executable = executable
 
-    @synchronize_timer('MeshSimplifier')
+    @synchronize_timer("MeshSimplifier")
     def __call__(self, mesh: trimesh.Trimesh) -> trimesh.Trimesh:
-        with tempfile.NamedTemporaryFile(suffix='.obj', delete=False) as temp_input:
-            with tempfile.NamedTemporaryFile(suffix='.obj', delete=False) as temp_output:
+        with tempfile.NamedTemporaryFile(suffix=".obj", delete=False) as temp_input:
+            with tempfile.NamedTemporaryFile(suffix=".obj", delete=False) as temp_output:
                 mesh.export(temp_input.name)
-                os.system(f'{self.executable} {temp_input.name} {temp_output.name}')
+                os.system(f"{self.executable} {temp_input.name} {temp_output.name}")
                 ms = trimesh.load(temp_output.name, process=False)
                 if isinstance(ms, trimesh.Scene):
                     combined_mesh = trimesh.Trimesh()

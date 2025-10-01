@@ -1,14 +1,14 @@
 <p align="center"><img src="https://github.com/user-attachments/assets/efb402a1-0b09-41e0-a6cb-259d442e76aa"></p>
 
 <div align="center">
-  <a href="https://3d.hunyuan.tencent.com" target="_blank"><img src="https://img.shields.io/badge/Official%20Site-333399.svg?logo=homepage" height="22px"></a>
-  <a href="https://huggingface.co/spaces/tencent/Hunyuan3D-2" target="_blank"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Demo-276cb4.svg" height="22px"></a>
-  <a href="https://huggingface.co/tencent/Hunyuan3D-2" target="_blank"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Models-d96902.svg" height="22px"></a>
-  <a href="https://3d-models.hunyuan.tencent.com/" target="_blank"><img src="https://img.shields.io/badge/Page-bb8a2e.svg?logo=github" height="22px"></a>
-  <a href="https://discord.gg/dNBrdrGGMa" target="_blank"><img src="https://img.shields.io/badge/Discord-white.svg?logo=discord" height="22px"></a>
-  <a href="https://arxiv.org/abs/2501.12202" target="_blank"><img src="https://img.shields.io/badge/Report-b5212f.svg?logo=arxiv" height="22px"></a>
-  <a href="https://x.com/TencentHunyuan" target="_blank"><img src="https://img.shields.io/badge/Hunyuan-black.svg?logo=x" height="22px"></a>
-  <a href="#community-resources" target="_blank"><img src="https://img.shields.io/badge/Community-lavender.svg?logo=homeassistantcommunitystore" height="22px"></a>
+    <a href="https://3d.hunyuan.tencent.com" target="_blank"><img src="https://img.shields.io/badge/Official%20Site-333399.svg?logo=homepage" height="22px"></a>
+    <a href="https://huggingface.co/spaces/tencent/Hunyuan3D-2" target="_blank"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Demo-276cb4.svg" height="22px"></a>
+    <a href="https://huggingface.co/tencent/Hunyuan3D-2" target="_blank"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Models-d96902.svg" height="22px"></a>
+    <a href="https://3d-models.hunyuan.tencent.com/" target="_blank"><img src="https://img.shields.io/badge/Page-bb8a2e.svg?logo=github" height="22px"></a>
+    <a href="https://discord.gg/dNBrdrGGMa" target="_blank"><img src="https://img.shields.io/badge/Discord-white.svg?logo=discord" height="22px"></a>
+    <a href="https://arxiv.org/abs/2501.12202" target="_blank"><img src="https://img.shields.io/badge/Report-b5212f.svg?logo=arxiv" height="22px"></a>
+    <a href="https://x.com/TencentHunyuan" target="_blank"><img src="https://img.shields.io/badge/Hunyuan-black.svg?logo=x" height="22px"></a>
+    <a href="#community-resources" target="_blank"><img src="https://img.shields.io/badge/Community-lavender.svg?logo=homeassistantcommunitystore" height="22px"></a>
 </div>
 
 [//]: # (<a href="#" target="_blank"><img src="https://img.shields.io/badge/Report-b5212f.svg?logo=arxiv" height="22px"></a>)
@@ -39,14 +39,13 @@ strategy is effective for decoupling the difficulties of shape and texture gener
 - [Models Zoo](#models-zoo)
 - [Bibtex](#bibtex)
 - [Acknowledgements](#acknowledgements)
-- [Community Resources](#community-resources)
 
 
 ## **Get Started with Hunyuan3D 2.0**
 
 Hunyuan3D 2.0 supports MacOs, Windows, Linux. You may follow the next steps to use Hunyuan3D 2.0 via:
 
-- [Gradio App](#gradio-app)
+- [Inference Script](#inference-script)
 - [API Server](#api-server)
 - [Code](#code-usage)
 - [Official Site](#official-site)
@@ -62,49 +61,10 @@ pip install -e .
 ```
 
 
-### Gradio App
-
-You could also host a [Gradio](https://www.gradio.app/) App (which will be accessible at http://localhost:8080) in your own computer via:
-
-
-#### Use Default Model
+### Inference Script
 
 ```bash
-# Hunyuan3D-2mini
-python3 gradio_app.py
-```
-
-
-#### Use Specific Model
-
-##### Standard Version
-
-```bash
-# Hunyuan3D-2mini (WORKING)
-python3 gradio_app.py --model-path tencent/Hunyuan3D-2mini --subfolder hunyuan3d-dit-v2-mini
-
-# Hunyuan3D-2mv
-python3 gradio_app.py --model-path tencent/Hunyuan3D-2mv --subfolder hunyuan3d-dit-v2-mv
-
-# Hunyuan3D-2 (WORKING)
-python3 gradio_app.py --model-path tencent/Hunyuan3D-2 --subfolder hunyuan3d-dit-v2-0
-
-# Hunyuan3D-2.1 (NOT WORKING -- No Safetensors)
-python3 gradio_app.py --model-path tencent/Hunyuan3D-2.1 --subfolder hunyuan3d-dit-v2-1
-```
-
-
-##### Turbo Version
-
-```bash
-# Hunyuan3D-2mini (WORKING)
-python3 gradio_app.py --model-path tencent/Hunyuan3D-2mini --subfolder hunyuan3d-dit-v2-mini-turbo --enable-flashvdm
-
-# Hunyuan3D-2mv
-python3 gradio_app.py --model-path tencent/Hunyuan3D-2mv --subfolder hunyuan3d-dit-v2-mv-turbo --enable-flashvdm
-
-# Hunyuan3D-2
-python3 gradio_app.py --model-path tencent/Hunyuan3D-2 --subfolder hunyuan3d-dit-v2-0-turbo --enable-flashvdm
+python generate.py -i assets/test_images/horse0.png -c -o results
 ```
 
 
@@ -119,15 +79,19 @@ python api_server.py --host 127.0.0.1 --port 8080
 A demo post request for image to 3D without texture:
 
 ```bash
-img_b64_str=$(base64 -i assets/demo.png)
+python post.py -i assets/test_images/horse0.png -o results
+```
+
+```bash
+img_b64_str=$(base64 -i assets/test_images/horse0.png)
 curl -X POST "http://localhost:8080/generate" \
      -H "Content-Type: application/json" \
      -d '{"image": "'"$img_b64_str"'"}' \
-     -o test2.glb
+     -o results/horse0.glb
 ```
 
 ```powershell
-$img_path = Resolve-Path "assets/demo.png"
+$img_path = Resolve-Path "assets/test_images/horse0.png"
 $img_bytes = [System.IO.File]::ReadAllBytes($img_path)
 $img_b64_str = [Convert]::ToBase64String($img_bytes)
 $json = @{image = $img_b64_str} | ConvertTo-Json -Compress
@@ -135,7 +99,7 @@ Invoke-RestMethod -Uri "http://localhost:8080/generate" `
                   -Method Post `
                   -Body $json `
                   -ContentType "application/json" `
-                  -OutFile "test2.glb"
+                  -OutFile "results/horse0.glb"
 ```
 
 
@@ -149,12 +113,10 @@ You could assess **Hunyuan3D-DiT** via:
 from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline
 
 pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained("tencent/Hunyuan3D-2")
-mesh = pipeline(image="assets/demo.png")[0]
+mesh = pipeline(image="assets/test_images/horse0.png")[0]
 ```
 
 The output mesh is a [trimesh object](https://trimesh.org/trimesh.html), which you could save to glb/obj (or other format) file.
-
-Please visit [examples](examples) folder for more advanced usage, such as **multiview image to 3D generation** and **texture generation for handcrafted mesh**.
 
 
 ### Official Site
@@ -173,9 +135,7 @@ professional and amateur users to manipulate or even animate their meshes effici
 previous state-of-the-art models, including the open-source models and closed-source models in geometry details, condition alignment, texture quality, etc.
 
 
-<p align="center">
-  <img src="assets/images/system.jpg">
-</p>
+<p align="center"><img src="assets/images/system.jpg"></p>
 
 
 ## **Models Zoo**
@@ -231,7 +191,7 @@ It takes 6 GB VRAM for shape generation ~~and 16 GB for shape and texture genera
 | **Hunyuan3D-DiT-v2-0**         | Image to Shape Model        | 2025-01-21 | 1.1B | [Download][dit-v2-0]         |
 | ~~Hunyuan3D-Paint-v2-0~~       | Texture Generation Model    | 2025-01-21 | 1.3B | [Download][paint-v2-0]       |
 | ~~Hunyuan3D-Paint-v2-0-Turbo~~ | Distillation Texure Model   | 2025-04-01 | 1.3B | [Download][paint-v2-0-turbo] |
-| Hunyuan3D-Delight-v2-0         | Image Delight Model         | 2025-01-21 | 1.3B | [Download][delight-v2-0]     |
+| ~~Hunyuan3D-Delight-v2-0~~     | Image Delight Model         | 2025-01-21 | 1.3B | [Download][delight-v2-0]     |
 
 [dit-v2-0-turbo]: https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-dit-v2-0-turbo
 [dit-v2-0-fast]: https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-dit-v2-0-fast
@@ -246,32 +206,35 @@ It takes 6 GB VRAM for shape generation ~~and 16 GB for shape and texture genera
 If you found this repository helpful, please cite our reports:
 
 ```bibtex
-@misc{lai2025hunyuan3d25highfidelity3d,
-      title={Hunyuan3D 2.5: Towards High-Fidelity 3D Assets Generation with Ultimate Details},
-      author={Tencent Hunyuan3D Team},
-      year={2025},
-      eprint={2506.16504},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2506.16504},
+@misc{
+    lai2025hunyuan3d25highfidelity3d,
+    title={Hunyuan3D 2.5: Towards High-Fidelity 3D Assets Generation with Ultimate Details},
+    author={Tencent Hunyuan3D Team},
+    year={2025},
+    eprint={2506.16504},
+    archivePrefix={arXiv},
+    primaryClass={cs.CV},
+    url={https://arxiv.org/abs/2506.16504},
 }
 
-@misc{hunyuan3d22025tencent,
-      title={Hunyuan3D 2.0: Scaling Diffusion Models for High Resolution Textured 3D Assets Generation},
-      author={Tencent Hunyuan3D Team},
-      year={2025},
-      eprint={2501.12202},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV},
+@misc{
+    hunyuan3d22025tencent,
+    title={Hunyuan3D 2.0: Scaling Diffusion Models for High Resolution Textured 3D Assets Generation},
+    author={Tencent Hunyuan3D Team},
+    year={2025},
+    eprint={2501.12202},
+    archivePrefix={arXiv},
+    primaryClass={cs.CV},
 }
 
-@misc{yang2024hunyuan3d,
-      title={Hunyuan3D 1.0: A Unified Framework for Text-to-3D and Image-to-3D Generation},
-      author={Tencent Hunyuan3D Team},
-      year={2024},
-      eprint={2411.02293},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV},
+@misc{
+    yang2024hunyuan3d,
+    title={Hunyuan3D 1.0: A Unified Framework for Text-to-3D and Image-to-3D Generation},
+    author={Tencent Hunyuan3D Team},
+    year={2024},
+    eprint={2411.02293},
+    archivePrefix={arXiv},
+    primaryClass={cs.CV},
 }
 ```
 

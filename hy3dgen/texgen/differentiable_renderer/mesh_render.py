@@ -101,7 +101,7 @@ def linear_grid_put_2d(H, W, coords, values, return_count=False):
 class MeshRender():
     def __init__(
         self, camera_distance=1.45, camera_type='orth', default_resolution=1024, texture_size=1024, use_antialias=True, max_mip_level=None, filter_mode='linear',
-        bake_mode='linear', raster_mode='cr', device='cuda',
+        bake_mode='linear', raster_mode='cr', device: torch.types.Device = 'cuda',
     ):
 
         self.device = device

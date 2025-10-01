@@ -73,15 +73,15 @@ class DiagonalGaussianDistribution(object):
 class VectsetVAE(nn.Module):
 
     @classmethod
-    @synchronize_timer('VectsetVAE Model Loading')
-    def from_single_file(cls, ckpt_path, config_path, device='cuda', dtype=torch.float16, use_safetensors=True, **kwargs):
+    @synchronize_timer("VectsetVAE Model Loading")
+    def from_single_file(cls, ckpt_path, config_path, device: torch.types.Device = 'cuda', dtype=torch.float16, use_safetensors=True, **kwargs):
         # load config
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
 
         # load ckpt
         if use_safetensors:
-            ckpt_path = ckpt_path.replace(".ckpt", ".safetensors")
+            ckpt_path = ckpt_path.replace('.ckpt', '.safetensors')
         if not os.path.exists(ckpt_path):
             raise FileNotFoundError(f"Model file {ckpt_path} not found.")
 
@@ -90,7 +90,7 @@ class VectsetVAE(nn.Module):
             import safetensors.torch
             ckpt = safetensors.torch.load_file(ckpt_path, device='cpu')
         else:
-            ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=True)
+            ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=True, mmap=True)
 
         model_kwargs = config['params']
         model_kwargs.update(kwargs)
@@ -102,14 +102,14 @@ class VectsetVAE(nn.Module):
 
     @classmethod
     def from_pretrained(
-        cls, model_path, device: str | torch.device = 'cuda', dtype=torch.float16, use_safetensors=True, variant='fp16', subfolder='hunyuan3d-vae-v2-0', **kwargs,
+        cls, model_path, device: torch.types.Device = 'cuda', dtype=torch.float16, use_safetensors=True, variant='fp16', subfolder="hunyuan3d-vae-v2-0", **kwargs,
     ):
         config_path, ckpt_path = smart_load_model(model_path, subfolder=subfolder, use_safetensors=use_safetensors, variant=variant)
         return cls.from_single_file(ckpt_path, config_path, device=device, dtype=dtype, use_safetensors=use_safetensors, **kwargs)
 
     def init_from_ckpt(self, path, ignore_keys=()):
-        state_dict = torch.load(path, map_location="cpu")
-        state_dict = state_dict.get("state_dict", state_dict)
+        state_dict = torch.load(path, map_location='cpu', mmap=True)
+        state_dict = state_dict.get('state_dict', state_dict)
         keys = list(state_dict.keys())
         for k in keys:
             for ik in ignore_keys:
@@ -132,13 +132,13 @@ class VectsetVAE(nn.Module):
         self.surface_extractor = surface_extractor
 
     def latents2mesh(self, latents: torch.FloatTensor, **kwargs):
-        with synchronize_timer('Volume decoding'):
+        with synchronize_timer("Volume decoding"):
             grid_logits = self.volume_decoder(latents, self.geo_decoder, **kwargs)
-        with synchronize_timer('Surface extraction'):
+        with synchronize_timer("Surface extraction"):
             outputs = self.surface_extractor(grid_logits, **kwargs)
         return outputs
 
-    def enable_flashvdm_decoder(self, enabled: bool = True, adaptive_kv_selection=True, topk_mode='mean', mc_algo='dmc'):
+    def enable_flashvdm_decoder(self, enabled=True, adaptive_kv_selection=True, topk_mode='mean', mc_algo='dmc'):
         if enabled:
             if adaptive_kv_selection:
                 self.volume_decoder = FlashVDMVolumeDecoding(topk_mode)
@@ -154,10 +154,10 @@ class VectsetVAE(nn.Module):
 
 class ShapeVAE(VectsetVAE):
     def __init__(
-        self, *, num_latents: int, embed_dim: int, width: int, heads: int, num_decoder_layers: int, num_encoder_layers: int = 8, pc_size: int = 5120,
-        pc_sharpedge_size: int = 5120, point_feats: int = 3, downsample_ratio: int = 20, geo_decoder_downsample_ratio: int = 1, geo_decoder_mlp_expand_ratio: int = 4,
-        geo_decoder_ln_post: bool = True, num_freqs: int = 8, include_pi: bool = True, qkv_bias: bool = True, qk_norm: bool = False, label_type: str = "binary",
-        drop_path_rate: float = 0.0, scale_factor: float = 1.0, use_ln_post: bool = True, ckpt_path: str | None = None,
+        self, *, num_latents: int, embed_dim: int, width: int, heads: int, num_decoder_layers: int, num_encoder_layers=8, pc_size=5120,
+        pc_sharpedge_size=5120, point_feats=3, downsample_ratio=20, geo_decoder_downsample_ratio=1, geo_decoder_mlp_expand_ratio=4,
+        geo_decoder_ln_post=True, num_freqs=8, include_pi=True, qkv_bias=True, qk_norm=False, label_type='binary',
+        drop_path_rate=0.0, scale_factor=1.0, use_ln_post=True, ckpt_path: str = None,
     ):
         super().__init__()
         self.geo_decoder_ln_post = geo_decoder_ln_post

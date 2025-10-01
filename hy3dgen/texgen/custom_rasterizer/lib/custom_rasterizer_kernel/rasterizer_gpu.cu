@@ -84,7 +84,7 @@ __global__ void rasterizeImagecoordsKernelGPU(float* V, int* F, float* d, INT64*
 {
     int f = blockIdx.x * blockDim.x + threadIdx.x;
     if (f >= num_faces)
-        return; 
+        return;
 
     float* vt0_ptr = V + (F[f * 3] * 4);
     float* vt1_ptr = V + (F[f * 3 + 1] * 4);
@@ -112,10 +112,10 @@ std::vector<torch::Tensor> rasterize_image_gpu(torch::Tensor V, torch::Tensor F,
 
     if (!use_depth_prior) {
         rasterizeImagecoordsKernelGPU<<<(num_faces+255)/256,256,0,at::cuda::getCurrentCUDAStream()>>>(V.data_ptr<float>(), F.data_ptr<int>(), 0,
-            (INT64*)z_min.data_ptr<int64_t>(), occlusion_truncation, width, height, num_vertices, num_faces); 
+            (INT64*)z_min.data_ptr<int64_t>(), occlusion_truncation, width, height, num_vertices, num_faces);
     } else {
         rasterizeImagecoordsKernelGPU<<<(num_faces+255)/256,256,0,at::cuda::getCurrentCUDAStream()>>>(V.data_ptr<float>(), F.data_ptr<int>(), D.data_ptr<float>(),
-            (INT64*)z_min.data_ptr<int64_t>(), occlusion_truncation, width, height, num_vertices, num_faces); 
+            (INT64*)z_min.data_ptr<int64_t>(), occlusion_truncation, width, height, num_vertices, num_faces);
     }
 
     auto float_options = torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCUDA, device_id).requires_grad(false);

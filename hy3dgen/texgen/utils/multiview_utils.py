@@ -21,13 +21,13 @@ from diffusers import DiffusionPipeline, EulerAncestralDiscreteScheduler, LCMSch
 
 
 class Multiview_Diffusion_Net():
-    def __init__(self, config) -> None:
+    def __init__(self, config):
         self.device = config.device
         self.view_size = 512
         multiview_ckpt_path = config.multiview_ckpt_path
 
         current_file_path = os.path.abspath(__file__)
-        custom_pipeline_path = os.path.join(os.path.dirname(current_file_path), '..', 'hunyuanpaint')
+        custom_pipeline_path = os.path.join(os.path.dirname(current_file_path), "..", "hunyuanpaint")
 
         pipeline = DiffusionPipeline.from_pretrained(
             multiview_ckpt_path, custom_pipeline=custom_pipeline_path, torch_dtype=torch.float16,
@@ -47,7 +47,7 @@ class Multiview_Diffusion_Net():
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
-        os.environ["PL_GLOBAL_SEED"] = str(seed)
+        os.environ['PL_GLOBAL_SEED'] = str(seed)
 
     def __call__(self, input_images, control_images, camera_info):
 
@@ -75,8 +75,8 @@ class Multiview_Diffusion_Net():
         kwargs['num_in_batch'] = num_view
         kwargs['camera_info_gen'] = camera_info_gen
         kwargs['camera_info_ref'] = camera_info_ref
-        kwargs["normal_imgs"] = normal_image
-        kwargs["position_imgs"] = position_image
+        kwargs['normal_imgs'] = normal_image
+        kwargs['position_imgs'] = position_image
 
         mvd_image = self.pipeline(input_images, num_inference_steps=30, **kwargs).images
 

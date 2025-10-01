@@ -65,7 +65,7 @@ class SurfaceExtractor:
 class MCSurfaceExtractor(SurfaceExtractor):
     def run(self, grid_logit, *, mc_level, bounds, octree_resolution, **kwargs):
         vertices, faces, normals, _ = measure.marching_cubes(
-            grid_logit.cpu().numpy(), mc_level, method="lewiner",
+            grid_logit.cpu().numpy(), mc_level, method='lewiner',
         )
         grid_size, bbox_min, bbox_size = self._compute_box_stat(bounds, octree_resolution)
         vertices = vertices / grid_size * bbox_size + bbox_min

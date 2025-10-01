@@ -57,7 +57,7 @@ def get_1d_sincos_pos_embed_from_grid(embed_dim: int, pos: np.ndarray):
 
 
 class Timesteps(nn.Module):
-    def __init__(self, num_channels: int, downscale_freq_shift: float = 0.0, scale: int = 1, max_period: int = 10000):
+    def __init__(self, num_channels: int, downscale_freq_shift=0.0, scale=1, max_period=10000):
         super().__init__()
         self.num_channels = num_channels
         self.downscale_freq_shift = downscale_freq_shift
@@ -65,7 +65,7 @@ class Timesteps(nn.Module):
         self.max_period = max_period
 
     def forward(self, timesteps):
-        assert len(timesteps.shape) == 1, "Timesteps should be a 1d-array"
+        assert len(timesteps.shape) == 1, "Timesteps should be a 1d-array."
         embedding_dim = self.num_channels
         half_dim = embedding_dim // 2
         exponent = -math.log(self.max_period) * torch.arange(start=0, end=half_dim, dtype=torch.float32, device=timesteps.device)
@@ -131,9 +131,9 @@ class CrossAttention(nn.Module):
         self.qdim = qdim
         self.kdim = kdim
         self.num_heads = num_heads
-        assert self.qdim % num_heads == 0, "self.qdim must be divisible by num_heads"
+        assert self.qdim % num_heads == 0, "`qdim` must be divisible by `num_heads`."
         self.head_dim = self.qdim // num_heads
-        assert self.head_dim % 8 == 0 and self.head_dim <= 128, "Only support head_dim <= 128 and divisible by 8"
+        assert self.head_dim % 8 == 0 and self.head_dim <= 128, "Only support `head_dim` <= 128 and divisible by 8."
         self.scale = self.head_dim ** -0.5
 
         self.to_q = nn.Linear(qdim, qdim, bias=qkv_bias)
@@ -192,12 +192,12 @@ class CrossAttention(nn.Module):
         k = self.k_norm(k)
 
         with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=True):
-            q, k, v = map(lambda t: rearrange(t, 'b n h d -> b h n d', h=self.num_heads), (q, k, v))
+            q, k, v = map(lambda t: rearrange(t, "b n h d -> b h n d", h=self.num_heads), (q, k, v))
             context = F.scaled_dot_product_attention(q, k, v).transpose(1, 2).reshape(b, s1, -1)
 
         if self.with_dca:
             with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=True):
-                k_dca, v_dca = map(lambda t: rearrange(t, 'b n h d -> b h n d', h=self.num_heads), (k_dca, v_dca))
+                k_dca, v_dca = map(lambda t: rearrange(t, "b n h d -> b h n d", h=self.num_heads), (k_dca, v_dca))
                 context_dca = F.scaled_dot_product_attention(q, k_dca, v_dca).transpose(1, 2).reshape(b, s1, -1)
 
             context = context + self.dca_weight * context_dca
@@ -214,10 +214,10 @@ class Attention(nn.Module):
         super().__init__()
         self.dim = dim
         self.num_heads = num_heads
-        assert self.dim % num_heads == 0, 'dim should be divisible by num_heads'
+        assert self.dim % num_heads == 0, "`dim` should be divisible by `num_heads`."
         self.head_dim = self.dim // num_heads
         # This assertion is aligned with flash attention
-        assert self.head_dim % 8 == 0 and self.head_dim <= 128, "Only support head_dim <= 128 and divisible by 8"
+        assert self.head_dim % 8 == 0 and self.head_dim <= 128, "Only support `head_dim` <= 128 and divisible by 8."
         self.scale = self.head_dim ** -0.5
 
         self.to_q = nn.Linear(dim, dim, bias=qkv_bias)
@@ -259,7 +259,7 @@ class HunYuanDiTBlock(nn.Module):
     def __init__(
         self, hidden_size, c_emb_size, num_heads, text_states_dim=1024, use_flash_attn=False, qk_norm=False, norm_layer=nn.LayerNorm, qk_norm_layer=nn.RMSNorm,
         with_decoupled_ca=False, decoupled_ca_dim=16, decoupled_ca_weight=1.0, init_scale=1.0, qkv_bias=True, skip_connection=True, timested_modulate=False,
-        use_moe: bool = False, num_experts: int = 8, moe_top_k: int = 2, **kwargs,
+        use_moe=False, num_experts=8, moe_top_k=2, **kwargs,
     ):
         super().__init__()
         self.use_flash_attn = use_flash_attn
@@ -295,7 +295,7 @@ class HunYuanDiTBlock(nn.Module):
         if self.use_moe:
             print("Using moe.")
             self.moe = MoEBlock(
-                hidden_size, num_experts=num_experts, moe_top_k=moe_top_k, dropout=0.0, activation_fn="gelu", final_dropout=False,
+                hidden_size, num_experts=num_experts, moe_top_k=moe_top_k, dropout=0.0, activation_fn='gelu', final_dropout=False,
                 ff_inner_dim=int(hidden_size * 4.0), ff_bias=True,
             )
         else:
@@ -381,7 +381,7 @@ class HunYuanDiTPlain(nn.Module):
     def __init__(
         self, input_size=1024, in_channels=4, hidden_size=1024, context_dim=1024, depth=24, num_heads=16, mlp_ratio=4.0, norm_type='layer', qk_norm_type='rms',
         qk_norm=False, text_len=257, with_decoupled_ca=False, additional_cond_hidden_state=768, decoupled_ca_dim=16, decoupled_ca_weight=1.0, use_pos_emb=False,
-        use_attention_pooling=True, guidance_cond_proj_dim=None, qkv_bias=True, num_moe_layers: int = 6, num_experts: int = 8, moe_top_k: int = 2,
+        use_attention_pooling=True, guidance_cond_proj_dim=None, qkv_bias=True, num_moe_layers=6, num_experts=8, moe_top_k=2,
     ):
         super().__init__()
         self.input_size = input_size
@@ -409,7 +409,7 @@ class HunYuanDiTPlain(nn.Module):
 
         # Will use fixed sin-cos embedding:
         if self.use_pos_emb:
-            self.register_buffer("pos_embed", torch.zeros(1, input_size, hidden_size))
+            self.register_buffer('pos_embed', torch.zeros(1, input_size, hidden_size))
             pos = np.arange(self.input_size, dtype=np.float32)
             pos_embed = get_1d_sincos_pos_embed_from_grid(self.pos_embed.shape[-1], pos)
             self.pos_embed.data.copy_(torch.from_numpy(pos_embed).float().unsqueeze(0))
