@@ -470,7 +470,7 @@ class Hunyuan3DDiTPipeline:
         assert emb.shape == (w.shape[0], embedding_dim)
         return emb
 
-    def set_surface_extractor(self, mc_algo):
+    def set_surface_extractor(self, mc_algo=None):
         if mc_algo is None:
             return
         logger.info(

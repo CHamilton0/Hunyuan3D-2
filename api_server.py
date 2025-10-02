@@ -168,16 +168,15 @@ class ModelWorker:
             params['octree_resolution'] = params.get('octree_resolution', 256)
             params['num_inference_steps'] = params.get('num_inference_steps', 30)
             params['guidance_scale'] = params.get('guidance_scale', 5.0)
-            params['mc_algo'] = 'mc'
+            params['mc_algo'] = None
             import time
             start_time = time.time()
             mesh = self.pipeline(**params)[0]
             logger.info("--- %s seconds ---" % (time.time() - start_time))
 
-        if params.get('texture', False):
-            mesh = FloaterRemover()(mesh)
-            mesh = DegenerateFaceRemover()(mesh)
-            mesh = FaceReducer()(mesh, max_facenum=params.get('face_count', 40000))
+        mesh = FloaterRemover()(mesh)
+        mesh = DegenerateFaceRemover()(mesh)
+        mesh = FaceReducer()(mesh, max_facenum=params.get('max_facenum', 40000))
 
         type = params.get('type', 'glb')
         with tempfile.NamedTemporaryFile(suffix=f".{type}", delete=False) as temp_file:
@@ -260,7 +259,6 @@ async def status(uid: str):
 if __name__ == '__main__':
 
     import argparse
-    import json
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--host', type=str, default="127.0.0.1")

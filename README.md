@@ -70,13 +70,13 @@ python generate.py -i assets/test_images/horse0.png -c -o results
 
 ### API Server
 
-You could launch an API server locally, which you could post web request for Image/Text to 3D, Texturing existing mesh, etc.:
+You could launch an API server locally, which you could post web request for Image to 3D:
 
 ```bash
 python api_server.py --host 127.0.0.1 --port 8080
 ```
 
-A demo post request for image to 3D without texture:
+A demo post request for Image to 3D:
 
 ```bash
 python post.py -i assets/test_images/horse0.png -o results

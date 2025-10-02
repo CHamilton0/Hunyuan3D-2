@@ -20,10 +20,10 @@
     "model": {
         "model_path": "tencent/Hunyuan3D-2mini",
         "subfolder": "hunyuan3d-dit-v2-mini",
-        "use_safetensors": "True",
+        "use_safetensors": true,
         "variant": "fp16",
         "device": "cuda",
-        "enable_flashvdm": "False"
+        "enable_flashvdm": false
     },
     "params": {
         "guidance_scale": 5.0,
