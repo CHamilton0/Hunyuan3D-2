@@ -213,7 +213,7 @@ class Hunyuan3DDiTPipeline:
         self.model = torch.compile(self.model)
         self.conditioner = torch.compile(self.conditioner)
 
-    def enable_flashvdm(self, enabled=True, adaptive_kv_selection=True, topk_mode='mean', mc_algo='mc', replace_vae=True):
+    def enable_flashvdm(self, enabled=False, adaptive_kv_selection=True, topk_mode='mean', mc_algo='mc', replace_vae=True):
         model_path = self.kwargs['from_pretrained_kwargs']['model_path']
         model_name = os.path.split(model_path)[-1]
         turbo_ext = "-turbo" if enabled else ""
@@ -519,7 +519,7 @@ class Hunyuan3DDiTPipeline:
                 guidance_scale_tensor, embedding_dim=self.model.guidance_cond_proj_dim,
             ).to(device=device, dtype=latents.dtype)
         with synchronize_timer("Diffusion Sampling"):
-            for i, t in enumerate(tqdm(timesteps, disable=not enable_pbar, desc="Diffusion Sampling:", leave=False)):
+            for i, t in enumerate(tqdm(timesteps, disable=not enable_pbar, desc="Diffusion Sampling", leave=False)):
                 # expand the latents if we are doing classifier free guidance
                 if do_classifier_free_guidance:
                     latent_model_input = torch.cat([latents] * (3 if dual_guidance else 2))
@@ -600,12 +600,12 @@ class Hunyuan3DDiTFlowMatchingPipeline(Hunyuan3DDiTPipeline):
         latents = self.prepare_latents(batch_size, dtype, device, generator)
 
         guidance = None
-        if hasattr(self.model, 'guidance_embed') and self.model.guidance_embed:
+        if hasattr(self.model, 'guidance_embed') and self.model.guidance_embed is True:
             guidance = torch.tensor([guidance_scale] * batch_size, device=device, dtype=dtype)
             # logger.info(f"Using guidance embed with scale {guidance_scale}")
 
         with synchronize_timer("Diffusion Sampling"):
-            for i, t in enumerate(tqdm(timesteps, disable=not enable_pbar, desc="Diffusion Sampling:")):
+            for i, t in enumerate(tqdm(timesteps, disable=not enable_pbar, desc="Diffusion Sampling")):
                 # expand the latents if we are doing classifier free guidance
                 if do_classifier_free_guidance:
                     latent_model_input = torch.cat([latents] * 2)

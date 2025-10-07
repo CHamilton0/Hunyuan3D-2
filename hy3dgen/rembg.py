@@ -17,8 +17,8 @@ from rembg import remove, new_session
 
 
 class BackgroundRemover():
-    def __init__(self):
-        self.session = new_session()
+    def __init__(self, model_name='u2net'):
+        self.session = new_session(model_name=model_name)
 
     def __call__(self, image: Image.Image, am=False, amft=240, ambt=10, ames=10):
         """

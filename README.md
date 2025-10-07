@@ -56,7 +56,8 @@ Hunyuan3D 2.0 supports MacOs, Windows, Linux. You may follow the next steps to u
 ```bash
 git clone https://github.com/ict302it12/Hunyuan3D-2.git
 cd Hunyuan3D-2
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+pip install nvidia-pyindex
+pip install torch==2.0.1 torchvision==0.15.2 --index-url https://download.pytorch.org/whl/cu118
 pip install -e .
 ```
 
@@ -76,7 +77,7 @@ You could launch an API server locally, which you could post web request for Ima
 python api_server.py --host 127.0.0.1 --port 8080
 ```
 
-A demo post request for Image to 3D:
+A demo post request for image to 3D:
 
 ```bash
 python post.py -i assets/test_images/horse0.png -o results

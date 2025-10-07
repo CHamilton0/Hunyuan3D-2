@@ -19,14 +19,18 @@ dependencies = [
     "fastapi",
     "huggingface-hub[hf-xet]",
     "ninja",
-    "numpy",
+    "numpy==1.26.4",
     "omegaconf",
-    "onnxruntime",
+    "onnxruntime-gpu",
     "opencv-python",
+    "pandas==2.0.3",
     "pybind11",
     "pygltflib",
     "pymeshlab",
-    "rembg",
+    "rembg[gpu]",
+    "scipy==1.11.4",
+    "torch==2.0.1+cu118",
+    "torchvision==0.15.2+cu118",
     "tqdm>=4.66.3",
     "transformers>=4.48.0",
     "trimesh",
@@ -38,8 +42,5 @@ dependencies = [
 Homepage = "https://hunyuan-3d.com/"
 Repository = "https://github.com/Tencent-Hunyuan/Hunyuan3D-2.git"
 
-[tool.setuptools.packages]
-find = {}
-
-[tool.setuptools.package-data]
-hy3dgen = ["assets/*", "assets/**/*"]
+[tool.setuptools.packages.find]
+where = ["hy3dgen"]

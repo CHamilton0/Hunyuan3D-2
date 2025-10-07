@@ -34,9 +34,9 @@ def pipeline(args):
     with open(args.config_file, 'rb') as f:
         config = json.load(f)
     img_b64 = load_encode_image(args.img)
-    config['params']['image'] = img_b64
+    config['inference']['image'] = img_b64
     host, port = config['api']['host'], config['api']['port']
-    response = post(host, port, config['params'])
+    response = post(host, port, config['inference'])
     output_path = output_result(os.path.basename(args.img), response, args.output_dir)
     return response, output_path
 

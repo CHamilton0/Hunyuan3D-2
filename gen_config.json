@@ -7,30 +7,30 @@
     "api": {
         "host": "127.0.0.1",
         "port": 8080,
-        "limit_model_concurrency": 5
+        "limit_model_concurrency": 2
     },
     "data": {
         "img_dir": "assets/test_images",
         "outpur_dir": "results",
         "output_file_type": "glb"
     },
-    "mesh": {
-        "max_facenum": 20000
+    "inference": {
+        "guidance_scale": 7.5,
+        "num_chunks": 10000,
+        "num_inference_steps": 300,
+        "octree_resolution": 384,
+        "output_type": "trimesh",
+        "seed": 42
     },
     "model": {
         "model_path": "tencent/Hunyuan3D-2mini",
         "subfolder": "hunyuan3d-dit-v2-mini",
-        "use_safetensors": true,
+        "use_safetensors": false,
         "variant": "fp16",
         "device": "cuda",
         "enable_flashvdm": false
     },
-    "params": {
-        "guidance_scale": 5.0,
-        "num_chunks": 10000,
-        "num_inference_steps": 100,
-        "octree_resolution": 256,
-        "output_type": "trimesh",
-        "seed": 42
+    "post_processing": {
+        "max_facenum": 10000
     }
 }

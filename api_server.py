@@ -17,7 +17,7 @@
 
 import base64
 import logging
-import logging.handlers as handlers
+import logging.handlers
 import os
 import sys
 import tempfile
@@ -32,7 +32,8 @@ import torch
 import trimesh
 import uvicorn
 from PIL import Image
-from fastapi import FastAPI, Request, responses
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse
 
 from hy3dgen.rembg import BackgroundRemover
 from hy3dgen.shapegen import DegenerateFaceRemover, FaceReducer, FloaterRemover, Hunyuan3DDiTFlowMatchingPipeline
@@ -48,7 +49,10 @@ handler = None
 def build_logger(logger_name: str, logger_filename: str):
 
     global handler
-    formatter = logging.Formatter(fmt="%(asctime)s | %(levelname)s | %(name)s | %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    formatter = logging.Formatter(
+        fmt="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
     # Set the format of root handlers
     if not logging.getLogger().handlers:
@@ -58,13 +62,13 @@ def build_logger(logger_name: str, logger_filename: str):
     # Redirect stdout and stderr to loggers
     stdout_logger = logging.getLogger("stdout")
     stdout_logger.setLevel(logging.INFO)
-    sl = StreamToLogger(stdout_logger, logging.INFO)
-    sys.stdout = sl
+    sli = StreamToLogger(stdout_logger, logging.INFO)
+    sys.stdout = sli
 
     stderr_logger = logging.getLogger("stderr")
     stderr_logger.setLevel(logging.ERROR)
-    sl = StreamToLogger(stderr_logger, logging.ERROR)
-    sys.stderr = sl
+    sle = StreamToLogger(stderr_logger, logging.ERROR)
+    sys.stderr = sle
 
     # Get logger
     logger = logging.getLogger(logger_name)
@@ -74,7 +78,7 @@ def build_logger(logger_name: str, logger_filename: str):
     if handler is None:
         os.makedirs(LOGDIR, exist_ok=True)
         filename = os.path.join(LOGDIR, logger_filename)
-        handler = handlers.TimedRotatingFileHandler(filename, when='D', utc=True, encoding='UTF-8')
+        handler = logging.handlers.TimedRotatingFileHandler(filename, when='D', utc=True, encoding='UTF-8')
         handler.setFormatter(formatter)
 
         for _, item in logging.root.manager.loggerDict.items():
@@ -122,7 +126,7 @@ logger = build_logger("controller", f"{SAVE_DIR}/controller.log")
 
 
 def load_image_from_base64(image: str):
-    return Image.open(BytesIO(base64.b64decode(image)))
+    return Image.open(BytesIO(base64.b64decode(image))).convert('RGBA')
 
 
 class ModelWorker:
@@ -138,7 +142,7 @@ class ModelWorker:
         self.pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
             model_path, subfolder=subfolder, use_safetensors=True, device=device,
         )
-        self.pipeline.enable_flashvdm(mc_algo='mc')
+        #self.pipeline.enable_flashvdm(mc_algo='mc')
 
     def get_queue_length(self):
         if model_semaphore is None:
@@ -147,7 +151,7 @@ class ModelWorker:
             return args.limit_model_concurrency - model_semaphore._value + (len(model_semaphore._waiters) if model_semaphore._waiters is not None else 0)
 
     def get_status(self):
-        return {'speed': 1, 'queue_length': self.get_queue_length()}
+        return {"speed": 1, "queue_length": self.get_queue_length()}
 
     @torch.inference_mode()
     def generate(self, uid: uuid.UUID, params: dict[str, Any]):
@@ -160,23 +164,21 @@ class ModelWorker:
         image = self.rembg(image)
         params['image'] = image
 
-        if 'mesh' in params:
-            mesh = trimesh.load(BytesIO(base64.b64decode(params['mesh'])), file_type='glb')
-        else:
-            seed = params.get('seed', 42)
-            params['generator'] = torch.Generator(self.device).manual_seed(seed)
-            params['octree_resolution'] = params.get('octree_resolution', 256)
-            params['num_inference_steps'] = params.get('num_inference_steps', 30)
-            params['guidance_scale'] = params.get('guidance_scale', 5.0)
-            params['mc_algo'] = None
-            import time
-            start_time = time.time()
-            mesh = self.pipeline(**params)[0]
-            logger.info("--- %s seconds ---" % (time.time() - start_time))
+        seed = params.get('seed', 42)
+        params['generator'] = torch.Generator(self.device).manual_seed(seed)
+        params['octree_resolution'] = params.get('octree_resolution', 256)
+        params['num_inference_steps'] = params.get('num_inference_steps', 30)
+        params['guidance_scale'] = params.get('guidance_scale', 5.0)
+        params['mc_algo'] = None
+        import time
+        t0 = time.time()
+        mesh = self.pipeline(**params)[0]
+        t1 = time.time()
+        logger.info("--- %s seconds ---" % (t1 - t0))
 
         mesh = FloaterRemover()(mesh)
         mesh = DegenerateFaceRemover()(mesh)
-        mesh = FaceReducer()(mesh, max_facenum=params.get('max_facenum', 40000))
+        mesh = FaceReducer()(mesh, max_facenum=params.get('max_facenum', 10000))
 
         type = params.get('type', 'glb')
         with tempfile.NamedTemporaryFile(suffix=f".{type}", delete=False) as temp_file:
@@ -211,21 +213,21 @@ async def generate(request: Request):
 
     try:
         file_path, uid = worker.generate(uid, params)
-        return responses.FileResponse(file_path)
+        return FileResponse(file_path)
     except ValueError as e:
         traceback.print_exc()
         print("Caught ValueError:", e)
-        ret = {'text': server_error_msg, 'error_code': 1}
-        return responses.JSONResponse(ret, status_code=404)
+        ret = {"text": server_error_msg, "error_code": 1}
+        return JSONResponse(ret, status_code=404)
     except torch.cuda.CudaError as e:
         print("Caught torch.cuda.CudaError:", e)
-        ret = {'text': server_error_msg, 'error_code': 1}
-        return responses.JSONResponse(ret, status_code=404)
+        ret = {"text": server_error_msg, "error_code": 1}
+        return JSONResponse(ret, status_code=404)
     except Exception as e:
         traceback.print_exc()
         print("Caught Unknown Error:", e)
-        ret = {'text': server_error_msg, 'error_code': 1}
-        return responses.JSONResponse(ret, status_code=404)
+        ret = {"text": server_error_msg, "error_code": 1}
+        return JSONResponse(ret, status_code=404)
 
 
 @app.post("/send")
@@ -236,24 +238,24 @@ async def generate(request: Request):
     uid = uuid.uuid4()
 
     threading.Thread(target=worker.generate, args=(uid, params,)).start()
-    ret = {'uid': str(uid)}
+    ret = {"uid": str(uid)}
 
-    return responses.JSONResponse(ret, status_code=200)
+    return JSONResponse(ret, status_code=200)
 
 
 @app.get("/status/{uid}")
 async def status(uid: str):
 
     save_file_path = os.path.join(SAVE_DIR, f"{uid}.glb")
-    print(save_file_path, os.path.exists(save_file_path))
 
     if not os.path.exists(save_file_path):
-        response = {'status': "processing"}
+        response = {"status": "processing"}
     else:
-        base64_str = base64.b64encode(open(save_file_path, 'rb').read()).decode()
-        response = {'status': "completed", 'model_base64': base64_str}
+        with open(save_file_path, 'rb') as f:
+            base64_str = base64.b64encode(f.read()).decode('utf-8')
+            response = {"status": "completed", "model_base64": base64_str}
 
-    return responses.JSONResponse(response, status_code=200)
+    return JSONResponse(response, status_code=200)
 
 
 if __name__ == '__main__':
@@ -264,7 +266,7 @@ if __name__ == '__main__':
     parser.add_argument('--host', type=str, default="127.0.0.1")
     parser.add_argument('--port', type=int, default=8080)
     parser.add_argument('--model-path', type=str, default="tencent/Hunyuan3D-2mini")
-    parser.add_argument('--device', type=str, choices=['cpu', 'cuda'], default='cuda' if torch.cuda.is_available() else 'cpu')
+    parser.add_argument('--device', type=str, choices=['cpu', 'cuda'], default='cuda')
     parser.add_argument('--limit-model-concurrency', type=int, default=5)
     args = parser.parse_args()
     logger.info(f"args: {args}")
