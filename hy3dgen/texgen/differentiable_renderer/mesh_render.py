@@ -142,7 +142,7 @@ class MeshRender():
 
         self.raster_mode = raster_mode
         if self.raster_mode == 'cr':
-            import custom_rasterizer as cr
+            import hy3dgen.texgen.custom_rasterizer as cr
             self.raster = cr
         else:
             raise f'No raster named {self.raster_mode}'
