@@ -188,6 +188,9 @@ class ModelWorker:
         if 'image' in params:
             image = params["image"]
             image = load_image_from_base64(image)
+        elif 'image_file' in params:
+            image_file = params["image_file"]
+            image = Image.open(image_file)
         else:
             if 'text' in params:
                 text = params["text"]
