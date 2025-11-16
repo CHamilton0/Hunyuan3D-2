@@ -163,10 +163,15 @@ class ModelWorker:
             device=device,
         )
         self.pipeline.enable_flashvdm(mc_algo='mc')
-        # self.pipeline_t2i = HunyuanDiTPipeline(
-        #     'Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled',
-        #     device=device
-        # )
+        try:
+            self.pipeline_t2i = HunyuanDiTPipeline(
+                'Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled',
+                device=device
+            )
+            logger.info("HunyuanDiT text-to-image pipeline loaded successfully")
+        except Exception as e:
+            logger.warning(f"Failed to load HunyuanDiT text-to-image pipeline: {e}")
+            self.pipeline_t2i = None
         if enable_tex:
             self.pipeline_tex = Hunyuan3DPaintPipeline.from_pretrained(tex_model_path)
 
@@ -191,6 +196,8 @@ class ModelWorker:
         else:
             if 'text' in params:
                 text = params["text"]
+                if self.pipeline_t2i is None:
+                    raise ValueError("Text-to-image pipeline is not available. Please provide an image instead of text.")
                 image = self.pipeline_t2i(text)
             else:
                 raise ValueError("No input image or text provided")

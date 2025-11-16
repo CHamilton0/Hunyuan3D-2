@@ -142,9 +142,26 @@ class MeshRender():
 
         self.raster_mode = raster_mode
         if self.raster_mode == 'cr':
-            import custom_rasterizer as cr
-            self.raster = cr
-        else:
+            try:
+                import custom_rasterizer as cr
+                self.raster = cr
+                print("Using custom_rasterizer for rendering")
+            except ImportError as e:
+                print(f"Failed to import custom_rasterizer: {e}")
+                print("Falling back to nvdiffrast")
+                self.raster_mode = 'nvdiffrast'
+        
+        if self.raster_mode == 'nvdiffrast':
+            try:
+                import nvdiffrast.torch as dr
+                self.raster = dr
+                # Create OpenGL context for nvdiffrast
+                self.glctx = dr.RasterizeGLContext()
+                print("Using nvdiffrast for rendering")
+            except ImportError as e:
+                print(f"Failed to import nvdiffrast: {e}")
+                raise Exception("Neither custom_rasterizer nor nvdiffrast are available")
+        elif self.raster_mode not in ['cr', 'nvdiffrast']:
             raise f'No raster named {self.raster_mode}'
 
         if camera_type == 'orth':
@@ -171,6 +188,14 @@ class MeshRender():
             findices, barycentric = self.raster.rasterize(pos, tri, resolution)
             rast_out = torch.cat((barycentric, findices.unsqueeze(-1)), dim=-1)
             rast_out = rast_out.unsqueeze(0)
+        elif self.raster_mode == 'nvdiffrast':
+            rast_out_db = None
+            if pos.dim() == 2:
+                pos = pos.unsqueeze(0)
+            # Convert to nvdiffrast format
+            pos_clip = pos.contiguous()
+            rast_out, rast_out_db = self.raster.rasterize(self.glctx, pos_clip, tri, resolution)
+            # rast_out format for nvdiffrast: [batch, height, width, 4] where last channel is [u, v, z/w, triangle_id]
         else:
             raise f'No raster named {self.raster_mode}'
 
@@ -185,6 +210,11 @@ class MeshRender():
             if uv.dim() == 2:
                 uv = uv.unsqueeze(0)
             textc = self.raster.interpolate(uv, findices, barycentric, uv_idx)
+        elif self.raster_mode == 'nvdiffrast':
+            # For nvdiffrast, use the built-in interpolate function
+            if uv.dim() == 2:
+                uv = uv.unsqueeze(0)
+            textc, textd = self.raster.interpolate(uv, rast_out, uv_idx, rast_db, diff_attrs)
         else:
             raise f'No raster named {self.raster_mode}'
 
@@ -195,6 +225,10 @@ class MeshRender():
 
         if self.raster_mode == 'cr':
             raise f'Texture is not implemented in cr'
+        elif self.raster_mode == 'nvdiffrast':
+            # nvdiffrast texture sampling
+            return self.raster.texture(tex, uv, filter_mode=filter_mode, boundary_mode=boundary_mode, 
+                                     max_mip_level=max_mip_level)
         else:
             raise f'No raster named {self.raster_mode}'
 
@@ -205,6 +239,9 @@ class MeshRender():
         if self.raster_mode == 'cr':
             # Antialias has not been supported yet
             color = color
+        elif self.raster_mode == 'nvdiffrast':
+            # nvdiffrast antialiasing
+            return self.raster.antialias(color, rast, pos, tri)
         else:
             raise f'No raster named {self.raster_mode}'
 

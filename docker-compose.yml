@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  hunyuan3d:
+    build: .
+    image: hunyuan3d-2:latest
+    container_name: hunyuan3d-server
+    ports:
+      - "8080:8080"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - TORCH_CUDA_ARCH_LIST=8.0;8.6;8.9;9.0+PTX
+      - FORCE_CUDA=1
+      - MAX_JOBS=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      # Cache model downloads to persist between container restarts
+      - hunyuan3d_cache:/root/.cache
+      - u2net_cache:/root/.u2net
+      # Optional: mount a local directory for outputs
+      - ./outputs:/app/outputs
+    restart: unless-stopped
+    command: ["--enable_tex"]
+
+  # Fallback service without texture generation (always works)
+  hunyuan3d-safe:
+    build: .
+    image: hunyuan3d-2:latest
+    container_name: hunyuan3d-safe
+    ports:
+      - "8081:8080"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - hunyuan3d_cache:/root/.cache
+      - u2net_cache:/root/.u2net
+      - ./outputs:/app/outputs
+    restart: unless-stopped
+    command: []  # No texture generation
+    profiles:
+      - safe
+
+volumes:
+  hunyuan3d_cache:
+    driver: local
+  u2net_cache:
+    driver: local
